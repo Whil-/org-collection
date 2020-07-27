@@ -1,7 +1,7 @@
 ;;; org-collection.el -*- lexical-binding: t; -*-
 
 ;;; Code:
-;;;; Customization:
+;;; Customization
 (require 'org)
 
 (defvar org-collection-active nil
@@ -32,7 +32,7 @@ The implicit defaults can be customized."
                 :value-type
                 (directory :tag "Path")))
 
-(defcustom org-collection-file ".org-collection.el"
+(defcustom org-collection-file ".org-collection"
   ""
   :group 'org-collection
   :type 'string)
@@ -55,7 +55,7 @@ when a collection is active."
   :group 'org-collection
   :type 'file)
 
-;;;; Functions
+;;; Functions
 
 ;;;###autoload
 (defun org-collection-set (collection)
@@ -128,5 +128,5 @@ set after emacs was started."
           (set symbol
                (eval (car (get symbol 'standard-value))))))))
 
-;;; End
 (provide 'org-collection)
+;;; org-collection.el ends here

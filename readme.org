@@ -6,7 +6,7 @@ It makes sense for some parameters to have defaults other than the
 "global" defaults that can be configured in the emacs initailization.
 
 These parameters all have customizations within Org collection with
-prefixes =org-collection=default=. Setting any of these parameters
+prefixes =org-collection-default=. Setting any of these parameters
 shall deactivate the org collection default which means that the
 parameters will fall back on either any global user customization or
 the Org mode default.
@@ -352,7 +352,60 @@ Some configurations, such as =org-directory=, should probably be set
 by default if =.org-collection= exists in a folder that either is
 visited or configured as the current default collection.
 
-* Project get started
+** [2020-07-27 Mon] Org-mode needs to be split up!
+I have the sense that Org mode needs to be split up! It is really time
+to separate Org mode into the specification, the data format and it's
+customizations and the customizations of Emacs to work with that
+specification and data format. Probably a feat to big to be done, but
+it's really bothering me that it's not done.
+
+Org currently consist of:
+- A Specification of a file typ with a particular syntax.
+- Editor configurations and functions for workin with those files.
+- Configurations and functions for exporting those files.
+- Auxiliary modes to filter and present information in Org files.
+
+Org currently lacks:
+- A concept of grouping files together into collections in a
+  composable way.
+
+  The specification for grouping of files is important for certain
+  features to work better when thinking outside of the scope of a
+  single file.
+
+How would it be split up if it were to be more sensible?
+
+** [2020-07-27 Mon] Use emacs project!
+Take inspiration from, and make use of, the project functionality of
+Emacs! That should really be the guiding star in this work. Try to
+emulate how EDE looks like and works.
+
+That means some designs are already decided:
+- A project is simply a directory root.
+- =default-directory= determines the current project.
+- A customization for list of project directories,
+  =org-project-directories=.
+- Project files in the root of projects on a format similar to
+  (example from EDE):
+  #+begin_src emacs-lisp
+    (ede-proj-project "EDE testproject"
+      :file "Project.ede"
+      :name "EDE testproject"
+      :targets nil
+      :object-name "EDE testproject"
+      :makefile-type Makefile\.am)
+  #+end_src
+- The hook =project-find-functions= needs to be used for determining
+  if the file belongs to a project or not. Similar to:
+  #+begin_src emacs-lisp
+    (add-hook 'project-find-functions #'project-try-ede)
+  #+end_src
+
+I should then make the switch, or at least the extension for things in
+Org to be based on this project definition to work. Notably:
+- Org agenda
+- Org id
+- Org export
 
 * Custom file link
 ** Idea
