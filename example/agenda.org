@@ -1,0 +1,13 @@
+* TODO Note 1
+:PROPERTIES:
+:ID:       20200728T165929.414782
+:END:
+:LOGBOOK:
+- State "TODO"       from              [2020-07-28 Tue 15:07]
+:END:
+
+* DONE Note 2
+CLOSED: [2020-07-28 Tue 15:07]
+:LOGBOOK:
+- State "DONE"       from              [2020-07-28 Tue 15:07]
+:END:
