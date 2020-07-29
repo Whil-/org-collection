@@ -6,12 +6,6 @@
 
 ;;; Customizations
 
-(defvar org-collection-active nil
-  "Variable used for determining the active org-collection.
-
-org-collection-active should be either nil or one of the elements
-in `org-collection-directories'.")
-
 (defconst org-collection-file ".org-collection"
   "Customization file name for a collection.
 
@@ -85,8 +79,10 @@ Directories are okay to scan only if specified by
     (when org-collection-default-id-locations-file
       (let ((id-file (expand-file-name org-collection-default-id-locations-file
                                        default-directory)))
+        (org-collection--set-global-properties `((org-id-locations-file ,id-file)))
         (setq-local org-id-locations-file id-file)))
-    (org-collection--set-properties customization)
+    (org-collection--set-local-properties customization)
+    (org-collection--set-global-properties customization)
     (org-id-locations-load)
     (setq-local org-id-track-globally t)
     (setq-local org-collection-active collection)
@@ -99,11 +95,12 @@ This will reset Org mode customizations to the default, as
 set after emacs was started."
   (interactive (list (org-completing-read "Set collection: " org-collection-directories)))
   (let ((customization (plist-get (cdr collection) ':customization)))
-    (kill-local-variable org-directory)
-    (kill-local-variable org-id-locations-file)
-    (org-collection--unset-properties customization)
+    (kill-local-variable 'org-directory)
+    (kill-local-variable 'org-id-locations-file)
+    (org-collection--unset-local-properties customization)
+    (org-collection--unset-global-properties)
     (org-id-locations-load)
-    (kill-local-variable org-id-track-globally)
+    (kill-local-variable 'org-id-track-globally)
     (setq org-collection-active nil)
     (setq org-collection nil)))
 
@@ -118,7 +115,7 @@ set after emacs was started."
         (when (and (not org-collection)
                    (org-collection-directory-p default-directory))
           (let ((collection (org-collection-get default-directory)))
-            (org-collection-set collection)))))
+            (when collection (org-collection-set collection))))))
 
 (defun org-collection-try-disable ()
   "Disable the collection"
@@ -127,9 +124,9 @@ set after emacs was started."
         (when (and org-collection
                    (org-collection-directory-p default-directory))
           (let ((collection (org-collection-get default-directory)))
-            (org-collection-unset collection)))))
+            (when collection (org-collection-unset collection))))))
 
-(defun org-collection--set-properties (property-alist)
+(defun org-collection--set-local-properties (property-alist)
   ""
   (dolist (property property-alist)
     (let* ((symbol (car property))
@@ -142,7 +139,7 @@ set after emacs was started."
           (set (make-local-variable symbol) value)
         (warn "Invalid customization in Org collection: %s" name)))))
 
-(defun org-collection--unset-properties (property-alist)
+(defun org-collection--unset-local-properties (property-alist)
   ""
   (dolist (property property-alist)
     (let* ((symbol (car property))
@@ -153,6 +150,37 @@ set after emacs was started."
                    (string-prefix-p "ox-" name))
                (custom-variable-p symbol))
           (kill-local-variable symbol)))))
+
+(defun org-collection--set-global-properties (property-alist)
+  "Set global values for org collection.
+If a key in PROPERTY-ALIST match a predefined key within this
+function, the value of that property is set globally for the key.
+
+This is mostly discouraged but some things in the Org universe
+(still) requires globals to work.  This should be considered a
+hack until those things get support for org collections."
+  (let ((allowed-globals '(org-agenda-files
+                           org-todo-keywords
+                           org-id-locations-file)))
+    (dolist (property property-alist)
+      (let* ((symbol (car property))
+             (value (cadr property))
+             (name (symbol-name symbol)))
+        (when (and (member symbol allowed-globals)
+                   (custom-variable-p symbol)
+                   (not (equal (default-value symbol) value)))
+          (setq org-collection-globals-plist
+                (plist-put org-collection-globals-plist symbol (default-value symbol)))
+          (set-default symbol value))))))
+
+(defun org-collection--unset-global-properties ()
+  "Reset global properties.
+Goes through plist `org-collection-globals-plist' and (re)sets symbols
+to their default value."
+  (while org-collection-globals-plist
+    (let ((symbol (pop org-collection-globals-plist))
+          (value (pop org-collection-globals-plist)))
+      (set symbol value))))
 
 (defun org-collection-get (dir)
   "Return an Org collection given a directory."
@@ -184,6 +212,18 @@ set after emacs was started."
 If a file is a part of a collection, this specifies the
 collection that contains the current file.")
 (make-variable-buffer-local 'org-collection)
+
+(defvar org-collection-active nil
+  "Variable used for globally determining the active org-collection.
+
+Wen set, org-collection-active will be a collection object, as
+returned from `org-collection-get'.")
+
+(defvar org-collection-globals-plist nil
+  "Plist of modified global variables and their defaults.
+This variable is used internally to keep track of global changes
+that has been made, to be able to reset them when the mode is
+disabled.")
 
 ;;; Keymaps
 

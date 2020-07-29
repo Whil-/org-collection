@@ -11,3 +11,4 @@ CLOSED: [2020-07-28 Tue 15:07]
 :LOGBOOK:
 - State "DONE"       from              [2020-07-28 Tue 15:07]
 :END:
+[[id:20200728T165929.414782][Note 1]]
