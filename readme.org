@@ -1,6 +1,23 @@
-#-TITLE: Org collections readme
+#+TITLE: Org collections readme
 #+TODO: Project Todo
 * Introduction
+* Goals
+The goal is to wrap org-mode customizations into collections, or
+project if you will, to encourage a more modularized way of thinking
+and to help Org grow up a bit. Org should be less tied to emacs and by
+lifting customizations out from emacs into their own collections one
+step on the journey is taken. See more about motivation here:
+- [[id:20200729T125620.588871][Initial pitch]]
+
+Taking away the global mindset leaves something missing in between the
+whole of emacs and a singluar Org mode file. This whole is intended to
+be filled with the concept of an Org collection.
+
+The statements above lead to a couple of principles:
+- Rely as little as possible on global configurations.
+- Make org collection configuration depend as little on Emacs as
+  possible.
+
 * List of Org parameters with collection defaults
 It makes sense for some parameters to have defaults other than the
 "global" defaults that can be configured in the emacs initailization.
@@ -19,11 +36,14 @@ relative to the active org collection path:
 
 Some other parameters that makes sense to switch from the otherwise
 default Org mode default when in Org collection mode:
-- org-id-track-globally (already set to t - not needed here I suppose...?)
+- org-id-track-globally (enforce it, maybe with an override option)
 -
 
 * Log
 ** Initial pitch
+:PROPERTIES:
+:ID:       20200729T125620.588871
+:END:
 *** Motivation
 Org mode is more than a major mode for emacs buffers. That has been
 clear for quite some time. Org mode can operate on sets of files.
