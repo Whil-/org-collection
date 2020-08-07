@@ -4,10 +4,10 @@
 
 (require 'org)
 
-;;; Customizations
+;;;; Customizations
 
 (defconst org-collection-file ".org-collection"
-  "Customization file name for a collection.
+  "Filename for a collection.
 
 To reside in the directory root of a collection.")
 
@@ -15,6 +15,11 @@ To reside in the directory root of a collection.")
   "Options concerning configuring Org collections."
   :tag "Org Collection"
   :group 'org)
+
+(defcustom org-collection-list-file
+  (locate-user-emacs-file "org-collections")
+  "File in which to save the list of known collections."
+  :type 'file)
 
 (defcustom org-collection-directories t
   "Directories in which Org collection may search for files.
@@ -26,9 +31,11 @@ t if Org collection should look for files in the directory.
 
 Otherwise, the value should be a list of fully-expanded directory
 names. Org collection searches for files only in those
-directories.  If you invoke the commands \\[ede] or \\[ede-new] on
-a directory that is not listed, Emacs will offer to add it to the
-list.
+directories.
+
+If you invoke the commands \\[ede] or \\[ede-new] on a directory
+that is not listed, Emacs will offer to add it to
+`org-collection-list-file'.
 
 Any other value disables searching for Org collection files."
   :group 'org-collection
@@ -55,7 +62,7 @@ when a collection is active."
   :group 'org-collection
   :type 'file)
 
-;;; Functions working with collections
+;;;; Functions working with collections
 
 (defun org-collection-directory-p (dir)
   "Return non-nil if DIR is a safe directory to load.
@@ -72,8 +79,9 @@ Directories are okay to scan only if specified by
 ;;;###autoload
 (defun org-collection-set (collection)
   "Set active Org collection."
-  (let ((name (plist-get (cdr collection) ':name))
-        (customization (plist-get (cdr collection) ':customization)))
+  (let ((name (plist-get collection ':name))
+        (location (plist-get collection ':location))
+        (customization (plist-get collection ':customization)))
     (when org-collection-default-directory
       (setq-local org-directory default-directory))
     (when org-collection-default-id-locations-file
@@ -94,7 +102,7 @@ Directories are okay to scan only if specified by
 This will reset Org mode customizations to the default, as
 set after emacs was started."
   (interactive (list (org-completing-read "Set collection: " org-collection-directories)))
-  (let ((customization (plist-get (cdr collection) ':customization)))
+  (let ((customization (plist-get collection ':customization)))
     (kill-local-variable 'org-directory)
     (kill-local-variable 'org-id-locations-file)
     (org-collection--unset-local-properties customization)
@@ -115,7 +123,9 @@ set after emacs was started."
         (when (and (not org-collection)
                    (org-collection-directory-p default-directory))
           (let ((collection (org-collection-get default-directory)))
-            (when collection (org-collection-set collection))))))
+            (when collection
+              (org-collection-set collection)
+              (org-collection-update-list collection))))))
 
 (defun org-collection-try-disable ()
   "Disable the collection"
@@ -125,6 +135,56 @@ set after emacs was started."
                    (org-collection-directory-p default-directory))
           (let ((collection (org-collection-get default-directory)))
             (when collection (org-collection-unset collection))))))
+
+(defun org-collection-maybe-load-list-file ()
+  "If the collection list have not been loaded from file, load it."
+  (when (and (not org-collection-list)
+             (file-readable-p org-collection-list-file))
+    (with-temp-buffer
+      (insert-file-contents org-collection-list-file)
+      (condition-case-unless-debug nil
+          (let ((read-circle nil))
+            (setq org-collection-list (read (current-buffer))))
+        (end-of-file nil)))))
+
+(defun org-collection-update-list (collection)
+  (let* ((name (plist-get collection ':name))
+         (location (plist-get collection ':location))
+         (location-existing (lax-plist-get org-collection-list name)))
+    (cond ((and location-existing
+                (not (equal location-existing location)))
+           ;; Might add some user-interaction here later...
+           (setq org-collection-list
+                 (plist-put org-collection-list name location))
+           (org-collection--try-persist org-collection-list))
+          ((not location-existing)
+           (setq org-collection-list
+                 (plist-put org-collection-list name location))
+           (org-collection--try-persist org-collection-list)))))
+
+(defun org-collection--try-persist (c-list)
+  "Persist collection if possible.
+If collection is not listed in `org-collection-list-file'
+already, persist it there."
+  (when org-collection-list-file
+    (save-excursion
+      (condition-case nil
+          (progn
+            (set-buffer (find-file-noselect org-collection-list-file t))
+            (erase-buffer)
+            (insert ";; Org collection list file.
+;; This contains a plist of known org collections with collection
+;; `:name' as key and filesystem location as value.\n")
+            (pp c-list (current-buffer))
+            (insert "\n")
+            (condition-case nil
+                (save-buffer 0)
+              (error
+	       (message "File %s could not be saved."
+		        org-collection-list-file)))
+            (kill-buffer (current-buffer)))
+        (error
+         (message "File %s could not be read." org-collection-list-file))))))
 
 (defun org-collection--set-local-properties (property-alist)
   ""
@@ -192,8 +252,10 @@ to their default value."
           (insert-file-contents file)
           (condition-case-unless-debug nil
               (let ((read-circle nil))
-                (setq collection (read (current-buffer))))
-            (end-of-file nil)))))))
+                (setq collection (cdr (read (current-buffer)))))
+            (end-of-file nil)))))
+    (when collection
+      (plist-put collection :location file))))
 
 (defun org-collection-reset-all-buffers ()
   "Reset all the buffers due to change in org-collection."
@@ -205,7 +267,17 @@ to their default value."
             (org-collection-try-enable)
           (org-collection-try-disable))))))
 
-;;; Management variables
+(defun org-collection-reset-variables ()
+  "Resets global variables in org-collection.
+
+Some variables are expected to be reset elsewhere. Notably
+`org-collection-globals-plist' which is traversed and emptied in
+`org-collection--unset-global-properties'."
+  (setq org-collection nil
+        org-collection-list nil
+        org-collection-active nil))
+
+;;;; Management variables
 
 (defvar org-collection nil
   "The current buffer's collection at that level.
@@ -219,13 +291,17 @@ collection that contains the current file.")
 Wen set, org-collection-active will be a collection object, as
 returned from `org-collection-get'.")
 
+(defvar org-collection-list nil
+  "Variable used to cache the content of `org-collection-file'.
+Used only to reduce filesystem access.")
+
 (defvar org-collection-globals-plist nil
   "Plist of modified global variables and their defaults.
 This variable is used internally to keep track of global changes
 that has been made, to be able to reset them when the mode is
 disabled.")
 
-;;; Keymaps
+;;;; Keymaps
 
 (defvar org-collection-mode-map
   (let ((map (make-sparse-keymap))
@@ -236,25 +312,27 @@ disabled.")
     map)
   "Keymap used in project minor mode.")
 
-;;; Mode declarations
+;;;; Mode declarations
 
 ;;;###autoload
 (define-minor-mode org-collection-mode
   "Comment."
-  nil "OrgC" org-collection-mode-map
+  nil " OrgC" org-collection-mode-map
   :global t
   (cond (org-collection-mode
          ;; Mode was turned on
          (add-hook 'find-file-hook 'org-collection-try-enable)
 	 (add-hook 'dired-mode-hook 'org-collection-try-enable)
-         (org-collection-reset-all-buffers))
+         (org-collection-reset-all-buffers)
+         (org-collection-maybe-load-list-file))
         (t
          ;; Mode was turned off (or we didn't turn it on)
          (remove-hook 'find-file-hook 'org-collection-try-enable)
          (remove-hook 'dired-mode-hook 'org-collection-try-enable)
-         (org-collection-reset-all-buffers))))
+         (org-collection-reset-all-buffers)
+         (org-collection-reset-variables))))
 
-;;; Connect to emacs project and module provisioning
+;;;; Connect to emacs project and module provisioning
 
 (add-hook 'project-find-functions #'org-collection-get)
 

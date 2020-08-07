@@ -39,12 +39,14 @@ default Org mode default when in Org collection mode:
 - org-id-track-globally (enforce it, maybe with an override option)
 -
 
-* Log
-** Initial pitch
+* Initial pitch
 :PROPERTIES:
 :ID:       20200729T125620.588871
 :END:
-*** Motivation
+This pitch was sent to the Org mode mailinglist [2019-12-14 Sat]:
+- https://lists.gnu.org/archive/html/emacs-orgmode/2019-12/msg00215.html
+
+** Motivation
 Org mode is more than a major mode for emacs buffers. That has been
 clear for quite some time. Org mode can operate on sets of files.
 Consolidate TODO's and calendar information into custom views. Publish
@@ -58,7 +60,7 @@ sanity of our users and developers I think it's time to ... introduce
 another concept! One that hopefully can simplify things both for users
 and developers.
 
-*** Idea
+** Idea
 I propose to introduce =Org Collection= as a concept in the realm of
 Org mode. [fn:2]
 
@@ -94,8 +96,8 @@ was my initial name for this feature I think collection may be a
 better option. For the sake of this text both options work just fine.
 The idea is the same.
 
-*** Benefit
-**** For the user
+** Benefit
+*** For the user
 A user would gain mainly two benefits as I can see right now:
 1. The ability to clearly define (multiple) collections of files that
    belong together across org mode, with unique configurations.
@@ -121,7 +123,7 @@ to know what to operate on. I claim that both the human psyche and the
 system itself will have a much more easy time if it could configure
 these features together, in a given context!
 
-**** For the developer
+*** For the developer
 I claim there will be benefits for developers as well. Today there
 exists many packages that extend Org mode functionality. Many work
 with the idea of collections. Some that come to mind:
@@ -155,8 +157,8 @@ sure that the value of developing many of those features will be
 bigger if they could naturally attach to an Org collections
 definition!
 
-*** Example use cases
-**** Separate actions from reference
+** Example use cases
+*** Separate actions from reference
 One practice promoted by GTD is to separate actionable items from
 reference information. While that practice can be overcome by search
 etc. some might still value a clear separation.
@@ -169,7 +171,7 @@ agenda views.
 Want to only display not yet finished tasks? Switch to the Org
 collection for actionable items and browse away.
 
-**** Work / Personal separation
+*** Work / Personal separation
 The heading says it all. Some like to separate work and personal stuff
 out from each other. What more clear way to do that than can there be
 than to separate them into their own Org collections? That way you
@@ -177,7 +179,7 @@ potentially could let your work-related workflow (I.e. TODO-keywords)
 be different than the personal workflow. Without having to think about
 a global configuration that has to allow for both.
 
-**** Separated book library
+*** Separated book library
 Org mode can be used as a media manager of sort. Just define your
 conventions for the Org collection using TODO-keywords, categories and
 properties. Attach the e-books you have as attachments in an
@@ -193,11 +195,11 @@ Note that one can still have a holistic view on all Org mode documents
 as well, if important. It only requires a definition of a collection
 as the collection of all other collections!
 
-**** More?
+*** More?
 Please add more ideas when you think of them!
 
-*** Risks and challenges
-**** Which configuration to use?
+** Risks and challenges
+*** Which configuration to use?
 When I'm visiting a file that belongs to a collection, how should
 Emacs resolve configurations for that file?
 
@@ -215,7 +217,7 @@ user cares to set the local variable =org-collections-active= (or
 whatever it should be called)? In that case, just evaluate the
 settings for that project without doing any scan.
 
-**** Should project config allow local variables?
+*** Should project config allow local variables?
 Should the collections definition allow customization of variables
 that apply for Org mode features? Hmm... Maybe!? One thing that comes
 to mind is that a project should be able to define a custom attachment
@@ -227,7 +229,7 @@ support for looking into the collection definition and override the
 local variable. But that will add development effort and complexity to
 each feature. Not suggested.
 
-***** How to initialize the local variables?
+**** How to initialize the local variables?
 When visiting a file that belongs to a collection, should Emacs at
 that point initialize the collection-configuration for that
 collection? Ideally some kind of collection-resolution would be made.
@@ -239,7 +241,7 @@ check collection-belonging every time an Org mode file is visited!
 Possibly solve this with a variable that can be localized -
 =org-collections-active=?
 
-**** Conflict with other customizations
+*** Conflict with other customizations
 Maybe I've defined an attachment directory as a directory local
 variables in a folder, for all subfolders and files to inherit. Should
 collection-customizations override that? Or should the directory local
@@ -256,7 +258,7 @@ The more I think of it, there shouldn't be a customization for this at
 all. I think local definitions always should override the collection
 definition.
 
-**** Files that belong to multiple collections
+*** Files that belong to multiple collections
 What if I'm being a clever user and define multiple collections for
 the same files (I.e. overlap in the Venn-diagram of files grouped by
 collections). Which collection is "active" when I'm visiting the file?
@@ -271,7 +273,7 @@ where the first collection in that list should apply.
 If Emacs can rely on =org-collections-active= being set, then the
 collection referenced there should be used.
 
-**** Dynamic lists of files and folders for a collection?
+*** Dynamic lists of files and folders for a collection?
 Should the list of files allow for folders with recursion and patterns
 should it be required to provide a fixed defined list of files?
 
@@ -283,7 +285,7 @@ collection and a "collection-command" is run then the new file might not
 show up in the results anyway... So the user will be affected by
 caching and will have to know about it. Not good...
 
-*** Alternatives
+** Alternatives
 Doing research for this feature made me realize that much of what I'm
 proposing already exist! In another form though, as [[info:emacs#Directory variables][directory
 variables]]. That requires customizations to be defined as safe though.
@@ -297,7 +299,7 @@ are made safe):
   specific folder to get the agenda for the correct project
 - ....
 
-*** References
+** References
 I've mentioned this idea the Org mode mailing list previously, but
 only as short side notes to other topics:
 - https://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00211.html
@@ -311,6 +313,7 @@ a good thing. Because while Org mode may often start to be used as a
 task/project manager software, it's useful in a much wider context
 than that!
 
+* Gustavs build-log
 ** [2020-06-20 Sat] An idea of implementation
 Trying out various emacs configurations, such as doom emacs and radix
 I've realized that I don't like the fact that Org mode configuration
@@ -395,7 +398,7 @@ Org currently lacks:
 
 How would it be split up if it were to be more sensible?
 
-** [2020-07-27 Mon] Use emacs project!
+** [2020-07-27 Mon] Use emacs project!?
 Take inspiration from, and make use of, the project functionality of
 Emacs! That should really be the guiding star in this work. Try to
 emulate how EDE looks like and works.
@@ -426,6 +429,14 @@ Org to be based on this project definition to work. Notably:
 - Org agenda
 - Org id
 - Org export
+
+** [2020-08-07 Fri] Set things buffer-local vs global
+I have to be pragmatic here. Org mode relies on global configurations
+quite a lot, and before Org collection is integrated well within Org
+mode things will need to be set globally. Maybe it's not bad in
+itself... But I would like to have as a principle to try to keep
+things as local as possible. If possible. But not to bend my back over
+to make it work.
 
 * Custom file link
 ** Idea

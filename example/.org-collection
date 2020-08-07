@@ -1,8 +1,9 @@
+; -*- mode: emacs-lisp -*-
 (org-collection-definition
- :name "Notebook"
+ :name "Example collectiön"
  :customization (;; Main org collection customization
                  (org-use-speed-commands nil)
-                 (org-todo-keywords '((sequence "MAYBE" "TODO" "DONE")))
+                 (org-todo-keywords ((sequence "MAYBE" "TODO" "DONE")))
 
                  ;; Agenda customizations
                  (org-agenda-files ("agenda.org"))
