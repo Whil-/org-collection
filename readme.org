@@ -1,5 +1,4 @@
 #+TITLE: Org collections readme
-#+TODO: Project Todo
 * Introduction
 * Goals
 The goal is to wrap org-mode customizations into collections, or
@@ -437,6 +436,8 @@ mode things will need to be set globally. Maybe it's not bad in
 itself... But I would like to have as a principle to try to keep
 things as local as possible. If possible. But not to bend my back over
 to make it work.
+
+* TODO Figure out how org-collection-reset should look like
 
 * Custom file link
 ** Idea

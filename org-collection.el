@@ -93,8 +93,7 @@ Directories are okay to scan only if specified by
     (org-collection--set-global-properties customization)
     (org-id-locations-load)
     (setq-local org-id-track-globally t)
-    (setq-local org-collection-active collection)
-    (setq org-collection collection)))
+    (setq-local org-collection-active collection)))
 
 ;;;###autoload
 (defun org-collection-unset (collection)
@@ -109,8 +108,7 @@ set after emacs was started."
     (org-collection--unset-global-properties)
     (org-id-locations-load)
     (kill-local-variable 'org-id-track-globally)
-    (setq org-collection-active nil)
-    (setq org-collection nil)))
+    (setq org-collection-active nil)))
 
 (defun org-collection-apply-in-current-buffer (collection)
   "Apply options to the current buffer for the active collection."
@@ -118,23 +116,21 @@ set after emacs was started."
 
 (defun org-collection-try-enable ()
   "Enable the collection"
-    (if (and (stringp (buffer-file-name))
-	     (stringp default-directory))
-        (when (and (not org-collection)
-                   (org-collection-directory-p default-directory))
-          (let ((collection (org-collection-get default-directory)))
-            (when collection
-              (org-collection-set collection)
-              (org-collection-update-list collection))))))
+    (when (and (stringp (buffer-file-name))
+	       (stringp default-directory)
+               (org-collection-directory-p default-directory))
+      (let ((collection (org-collection-get default-directory)))
+        (when collection
+          (org-collection-set collection)
+          (org-collection-update-list collection)))))
 
 (defun org-collection-try-disable ()
   "Disable the collection"
-    (if (and (stringp (buffer-file-name))
-	     (stringp default-directory))
-        (when (and org-collection
-                   (org-collection-directory-p default-directory))
-          (let ((collection (org-collection-get default-directory)))
-            (when collection (org-collection-unset collection))))))
+    (when (and (stringp (buffer-file-name))
+	       (stringp default-directory)
+               (org-collection-directory-p default-directory))
+      (let ((collection (org-collection-get default-directory)))
+        (when collection (org-collection-unset collection)))))
 
 (defun org-collection-maybe-load-list-file ()
   "If the collection list have not been loaded from file, load it."
@@ -257,38 +253,29 @@ to their default value."
     (when collection
       (plist-put collection :location file))))
 
-(defun org-collection-reset-all-buffers ()
-  "Reset all the buffers due to change in org-collection."
+(defun org-collection-reset ()
+  "Reset mode.
+Resets buffers and global variables in org-collection.
+
+Some variables are expected to be reset elsewhere. Notably
+`org-collection-globals-plist' which is traversed and emptied in
+`org-collection--unset-global-properties'."
   (interactive)
   (dolist (b (buffer-list))
     (when (buffer-file-name b)
       (with-current-buffer b
         (if org-collection-mode
             (org-collection-try-enable)
-          (org-collection-try-disable))))))
-
-(defun org-collection-reset-variables ()
-  "Resets global variables in org-collection.
-
-Some variables are expected to be reset elsewhere. Notably
-`org-collection-globals-plist' which is traversed and emptied in
-`org-collection--unset-global-properties'."
-  (setq org-collection nil
-        org-collection-list nil
-        org-collection-active nil))
+          (org-collection-try-disable)
+          (setq org-collection-list nil
+                org-collection-active nil))))))
 
 ;;;; Management variables
-
-(defvar org-collection nil
-  "The current buffer's collection at that level.
-If a file is a part of a collection, this specifies the
-collection that contains the current file.")
-(make-variable-buffer-local 'org-collection)
 
 (defvar org-collection-active nil
   "Variable used for globally determining the active org-collection.
 
-Wen set, org-collection-active will be a collection object, as
+Wen set, `org-collection-active' will be a collection object, as
 returned from `org-collection-get'.")
 
 (defvar org-collection-list nil
@@ -323,14 +310,13 @@ disabled.")
          ;; Mode was turned on
          (add-hook 'find-file-hook 'org-collection-try-enable)
 	 (add-hook 'dired-mode-hook 'org-collection-try-enable)
-         (org-collection-reset-all-buffers)
+         (org-collection-reset)
          (org-collection-maybe-load-list-file))
         (t
          ;; Mode was turned off (or we didn't turn it on)
          (remove-hook 'find-file-hook 'org-collection-try-enable)
          (remove-hook 'dired-mode-hook 'org-collection-try-enable)
-         (org-collection-reset-all-buffers)
-         (org-collection-reset-variables))))
+         (org-collection-reset))))
 
 ;;;; Connect to emacs project and module provisioning
 
