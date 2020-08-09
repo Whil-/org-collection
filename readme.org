@@ -437,6 +437,112 @@ itself... But I would like to have as a principle to try to keep
 things as local as possible. If possible. But not to bend my back over
 to make it work.
 
+** [2020-08-08 Sat] Structure, etc.
+*** Global minor mode
+The module will create a global minor mode that can be used to enable
+org collection functionality.
+
+Determining if org-collection customizations are active is done
+primarily based on two variables:
+- org-collection-global
+- org-collection-local (buffer local)
+
+When these are both set org-collection events shall not run any code
+(except checking if those variables are set...).
+
+Since this minor mode will modify some global Org mode variables only
+one collection can be "active" at any time. Switching between
+collections is automatic and based on =default-directory=.
+
+The minor mode should ideally be able to consider the filesystem
+hierarchy and enable the collection also for subfolders within a
+collection. I.e partial matches on =default-directory= that finds the
+special collection file are also valid. The "longeset" match on
+default-directory is preferred.
+
+*** Entrypoints
+- When global minor mode is on:
+  - Activation of collection is event-driven by a 'maybe try
+    collection activation' event when a file is opened or buffer
+    activated.
+  - Org collection can be refreshed with special function
+    =org-collection-refresh=. This refresh shall reset variable
+    =org-collection-local= to nil for all buffers where it's set and
+    re-trigger the 'maybe try collection activation event' on active
+    buffer. Other buffers will be activated again by the event.
+- When global minor mode if off:
+  - Nothing
+
+Determining if org-collection customizations are active is done
+primarily based on two variables:
+- org-collection-global
+- org-collection-local (buffer local)
+- org-collection-cached (buffer local)
+
+These variables also act as a cache of sort. When set, org-collection
+events shall not run any code (except checking if those variables are
+set...). Org-collection-cached is used in all visited buffers as a
+signal to the hook for it to know to not scan it again for a
+collection.
+
+*** Hooks
+Which hooks to use then?
+
+It seems =buffer-list-update-hook= is the only option if I want this
+to be as intrusive as running each time a buffer is selected.
+The buffer list is resorted each time a switch between buffers is
+made, so that the selected buffer is highest in the list of buffers.
+This is not perfect as the name of the hook isn't explicitly about
+triggering when a buffer is selected. But it seems what Emacs has come
+up with so far.
+
+Using this hook should mean no other hook is needed. When a file is
+opened it will create a buffer that should trigger the
+=buffer-list-update-hook= mentioned above.
+
+*** Turning global minor mode on
+- Enables events (by hooks)
+- Looks in current buffer and enables a collection as if a 'maybe try
+  collection activation' event was triggered.
+
+*** Turning global minor mode off
+- Removes events (hooks)
+- Removes org-collection customization globally and in all open buffers
+
+*** Switching between collections
+Switching between collections should be done when a buffer is visited
+that has a collection attached to it that is different than the global
+collection.
+
+The switch is really only related to switching the parameters that
+requires global configuration. Thus it should be enough to check that
+the global and local configs are different.
+
+Note that this should be done even if the buffer-cache says the buffer
+has already been visited! The same event that deals with everything
+else needs to deal also with this.
+- If the buffer is cached then it's already been loaded and an
+  equality-check between =oc-global= and =oc-local= needs to be made
+  to determine if a global switch is needed or not.
+- If the buffer isn't cached then the local settings needs to apply
+  anyhow, and maybe it's easier to also set globals at that point,
+  even if it's already set? Can revise later if needed.
+
+*** Force reload of Org
+...might be needed, since a refresh of org config when triggered here
+might be after Org mode was set for the buffer...
+
+...there is the function =org-mode-restart=. Sounds not to bad.
+Probably not that performant though, but this should only run when a
+buffer either initializes a collection or is opened the first time.
+
+*** Misc
+
+Removed the following:
+: (interactive (list (org-completing-read "Set collection: " org-collection-list)))
+
+May be useful in separate function later on.
+
 * TODO Figure out how org-collection-reset should look like
 
 * Custom file link

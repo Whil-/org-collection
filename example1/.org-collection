@@ -1,11 +1,11 @@
 ; -*- mode: emacs-lisp -*-
 (org-collection-definition
- :name "Example collectiön"
+ :name "Example collectiön 1"
  :customization (;; Main org collection customization
                  (org-use-speed-commands nil)
                  (org-todo-keywords ((sequence "MAYBE" "TODO" "DONE")))
                  (org-log-done nil)
 
                  ;; Agenda customizations
-                 (org-agenda-files ("agenda.org"))
+                 (org-agenda-files ("agenda1.org" "agenda2.org"))
                  (org-agenda-file-regexp ".*\\.org\\'")))

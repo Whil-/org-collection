@@ -1,0 +1,8 @@
+#+TODO: Project Todo | Done
+* Project Note 1
+:PROPERTIES:
+:ID:       20200728T165929.414782
+:END:
+
+* Todo Note 2
+[[id:20200728T165929.414782][Note 1]]
