@@ -558,6 +558,10 @@ neccessary. One way is to put more checks in
 =org-collection-check-buffer-function=. And maybe only set the local config
 if the buffer has major mode set to Org-mode.
 
+Also, I think I have a bug now in that org-agenda-files doens't switch
+between the /global/ global and the /collection/ global value
+correctly... Need to investigate more!
+
 * TODO Figure out how org-collection-reset should look like
 
 * Custom file link
