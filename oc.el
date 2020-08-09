@@ -57,12 +57,23 @@ declared as an absolut path."
 (defvar-local org-collection-buffer-cached nil
   "Variable for keeping track of buffer scans.
 If this is set to anything but nil that means the minor mode
-should stop all further processing.")
+should stop all further processing.
+
+This is intentional buffer local so that Org collection can keep
+track of buffers one by one.")
+;; Org-collection-local is declared as permanent so that
+;; mode-switching or mode-reloading doesn't invalidate the variable.
+(put 'org-collection-buffer-cached 'permanent-local t)
 
 (defvar-local org-collection-local nil
   "The current buffer's collection at that level.
 If a file is a part of a collection, this specifies the
-collection that contains the current file.")
+collection that contains the current file.
+
+This is intentional buffer local to help Org collection keeping
+track of buffers one by one.")
+;; Org-collection-local is declared as permanent so that
+;; mode-switching doesn't invalidate the variable.
 (put 'org-collection-local 'permanent-local t)
 
 (defvar org-collection-global nil
@@ -83,7 +94,7 @@ disabled.")
 
 ;;;; Functions working with collections
 
-(defun org-collection-directory-p (dir)
+(defun org-collection--directory-p (dir)
   "Return non-nil if DIR is a safe directory to load.
 Directories are okay to scan only if specified by
 `org-collection-directories'."
@@ -91,16 +102,7 @@ Directories are okay to scan only if specified by
   ;; Scan only if allowed by `org-collection-directories'.
   (or (eq org-collection-directories t)
       (and (functionp org-collection-directories)
-           ;; since the function may be invoked within an hook, make
-           ;; sure to not run that hook again during execution, no
-           ;; matter what the code tries to do! Infinite loops may
-           ;; occur.
-           (let ((hook-enabled (memq 'org-collection-maybe-try-enable buffer-list-update-hook)))
-             (unwind-protect
-                 (progn
-                   (when hook-enabled (remove-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable))
-	           (funcall org-collection-directories dir))
-               (when hook-enabled (add-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable)))))
+	   (funcall org-collection-directories dir))
       (and (listp org-collection-directories)
 	   (member dir org-collection-directories))))
 
@@ -207,50 +209,75 @@ to their default value."
           (value (pop org-collection-global-defaults-plist)))
       (set symbol value))))
 
-(defun org-collection-maybe-try-enable ()
-  "Enable the collection if there is any and if needed.
-This function that tries to enable a collection.  It does so in
+(defun org-collection-check-buffer-function ()
+  "Check current buffer and enable or disable a collection if needed.
+This function works with the current buffer and is responsible
+for figuring out what collection to use, if any.  It does so in
 two phases, one is to configure the global state of Org required
 for the collection.  The second phase is to configure the local
 state on the active buffer.
 
 This function tries to do as little as possible since it's
-supposed to be used in a hook that triggers quite often!"
+supposed to be used in a hook that triggers quite often!  Maybe
+more conditional logic than needed due to that.  But in this
+case (and so far) better safe than sorry."
   (when (or (not org-collection-buffer-cached)
             ;; Even if cached, enabling might still be needed if the
             ;; local buffer collection is set but different the
             ;; global.
             (and org-collection-local
                  (not (eq org-collection-local
-                          org-collection-global))))
-    ;; Do some more checks to see if a collection really should be enabled
-    (when (and (stringp default-directory)
-               (org-collection-directory-p default-directory))
-      ;; Wrap the whole shit within an unwind-protect which disables
-      ;; the hook, to prevent the infinite loop
-      (let ((hook-enabled (memq 'org-collection-maybe-try-enable buffer-list-update-hook)))
-        (unwind-protect
-            (progn
-              (when hook-enabled (remove-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable))
+                          org-collection-global)))
+            ;; *Experimental* Make sure Org collection doesn't pollute
+            ;; *the global Org mode settings in Org mode buffers that
+            ;; *don't belong to a collection.
+            (and (eq major-mode 'org-mode)
+                 org-collection-global
+                 (not org-collection-local)))
+    ;; Wrap the whole within an unwind-protect which disables the
+    ;; hook, to prevent infinite loops
+    (let ((hook-enabled (memq 'org-collection-check-buffer-function buffer-list-update-hook)))
+      (unwind-protect
+          (progn
+            (when hook-enabled (remove-hook 'buffer-list-update-hook
+                                            'org-collection-check-buffer-function))
+            ;; Do some more checks to see if a collection really should be enabled
+            (when (and (stringp default-directory)
+                       (org-collection--directory-p default-directory))
               (let ((collection (or org-collection-local
                                     (org-collection--try-get-collection default-directory))))
                 (when collection
+                  ;; Deal with global collection settings
                   (unless (eq collection org-collection-global)
                     (when org-collection-global
                       (org-collection--unset-global))
                     (org-collection--set-global collection)
                     (org-collection--maybe-update-list collection))
-                  (unless (eq collection org-collection-local)
+                  ;; Deal with buffer local collection settings
+                  ;; (Only for Org mode buffers!)
+                  (when (and (eq major-mode 'org-mode)
+                             (not (eq collection org-collection-local)))
+                    ;; If a local collection exist for the buffer
+                    ;; since before, unset it.
                     (when org-collection-local
                       (org-collection--unset-local (current-buffer) org-collection-local))
-                    (org-collection--set-local (current-buffer) collection))
-                  ;; Need to refresh Org mode if the collection was found and in
-                  ;; need of update
-                  (when (eq major-mode 'org-mode)
+                    (org-collection--set-local (current-buffer) collection)
+                    ;; Also need to refresh Org mode if the collection
+                    ;; was found and in need of update.  Inhibit
+                    ;; messages from Org mode when doing this.  This
+                    ;; is unfortunately needed since the buffer local
+                    ;; config might be different after Org collection
+                    ;; has been set.
                     (let ((inhibit-message t))
                       (org-mode-restart))))))
-          (when hook-enabled (add-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable)))))
-    (setq org-collection-buffer-cached t)))
+            ;; Do some more checks to see if something should be disabled!
+            (when (and (eq major-mode 'org-mode)
+                       org-collection-global
+                       (not org-collection-local))
+              (org-collection--unset-global))
+            (setq org-collection-buffer-cached t))
+        (when hook-enabled (add-hook 'buffer-list-update-hook
+                                     'org-collection-check-buffer-function))))))
 
 (defun org-collection--try-load-list-file ()
   "If the collection list have not been loaded from file, load it."
@@ -336,8 +363,8 @@ location of that collection matches `default-directory'"
 (defun org-collection-refresh ()
   "Refresh the configuration of the collection"
   (interactive)
-  (org-collection-unset)
-  (org-collection-maybe-try-enable))
+  (org-collection--unset)
+  (org-collection-check-buffer-function))
 
 (defun org-collection--unset ()
   "Unset mode.
@@ -380,11 +407,11 @@ emptied in `org-collection--unset-global-properties'."
          ;; Try to load the list file before enabling the event. Saves
          ;; one unwind-protect!
          (org-collection--try-load-list-file)
-         (add-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable)
-         (org-collection-maybe-try-enable))
+         (add-hook 'buffer-list-update-hook 'org-collection-check-buffer-function)
+         (org-collection-check-buffer-function))
         (t
          ;; Mode was turned off (or we didn't turn it on)
-         (remove-hook 'buffer-list-update-hook 'org-collection-maybe-try-enable)
+         (remove-hook 'buffer-list-update-hook 'org-collection-check-buffer-function)
          ;; Unset after hook is removed. Saves one unwind-protect!
          (org-collection--unset)
          (setq org-collection-list nil))))

@@ -543,6 +543,21 @@ Removed the following:
 
 May be useful in separate function later on.
 
+** [2020-08-09 Sun] The foe - local variables and hooks!
+It seems the =buffer-list-update-hook= triggers ALOT! Not good. And my
+algorithms aren't good or fast enough to deal with it. It feels
+sluggish. The code is too hungry. Need to fix. I still /want/ to think
+of things as local first, global second. I might have to revise that
+soon. But for now I'll keep on going.
+
+Hungry things:
+1. Org-mode refresh.
+
+I have to minimize the refreshing. Only do it if it's really (really!)
+neccessary. One way is to put more checks in
+=org-collection-check-buffer-function=. And maybe only set the local config
+if the buffer has major mode set to Org-mode.
+
 * TODO Figure out how org-collection-reset should look like
 
 * Custom file link
