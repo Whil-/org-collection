@@ -209,7 +209,7 @@ to their default value."
           (value (pop org-collection-global-defaults-plist)))
       (set symbol value))))
 
-(defun org-collection-check-buffer-function ()
+(defun org-collection-check-buffer-function (&optional window)
   "Check current buffer and enable or disable a collection if needed.
 This function works with the current buffer and is responsible
 for figuring out what collection to use, if any.  It does so in
@@ -236,10 +236,10 @@ case (and so far) better safe than sorry."
                  (not org-collection-local)))
     ;; Wrap the whole within an unwind-protect which disables the
     ;; hook, to prevent infinite loops
-    (let ((hook-enabled (memq 'org-collection-check-buffer-function buffer-list-update-hook)))
+    (let ((hook-enabled (memq 'org-collection-check-buffer-function window-buffer-change-functions)))
       (unwind-protect
           (progn
-            (when hook-enabled (remove-hook 'buffer-list-update-hook
+            (when hook-enabled (remove-hook 'window-buffer-change-functions
                                             'org-collection-check-buffer-function))
             ;; Do some more checks to see if a collection really should be enabled
             (when (and (stringp default-directory)
@@ -275,8 +275,12 @@ case (and so far) better safe than sorry."
                        org-collection-global
                        (not org-collection-local))
               (org-collection--unset-global))
+            (if org-collection-global
+                (let ((name (plist-get org-collection-global ':name)))
+                  (setcar (cdr (assq 'org-collection-mode minor-mode-alist)) (format " OC(%s)" name)))
+              (setcar (cdr (assq 'org-collection-mode minor-mode-alist)) " OC"))
             (setq org-collection-buffer-cached t))
-        (when hook-enabled (add-hook 'buffer-list-update-hook
+        (when hook-enabled (add-hook 'window-buffer-change-functions
                                      'org-collection-check-buffer-function))))))
 
 (defun org-collection--try-load-list-file ()
@@ -399,19 +403,22 @@ emptied in `org-collection--unset-global-properties'."
 ;;;###autoload
 (define-minor-mode org-collection-mode
   "Comment."
-  nil " OC" org-collection-mode-map
+  :init-value nil
+  :lighter " OC"
+  :keymap org-collection-mode-map
   :global t
+  :version "27.1"
   (cond (org-collection-mode
          ;; Mode was turned on.
 
          ;; Try to load the list file before enabling the event. Saves
          ;; one unwind-protect!
          (org-collection--try-load-list-file)
-         (add-hook 'buffer-list-update-hook 'org-collection-check-buffer-function)
+         (add-hook 'window-buffer-change-functions 'org-collection-check-buffer-function)
          (org-collection-check-buffer-function))
         (t
          ;; Mode was turned off (or we didn't turn it on)
-         (remove-hook 'buffer-list-update-hook 'org-collection-check-buffer-function)
+         (remove-hook 'window-buffer-change-functions 'org-collection-check-buffer-function)
          ;; Unset after hook is removed. Saves one unwind-protect!
          (org-collection--unset)
          (setq org-collection-list nil))))

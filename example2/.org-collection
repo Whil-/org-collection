@@ -1,6 +1,6 @@
 ; -*- mode: emacs-lisp -*-
 (org-collection-definition
- :name "Example collectiön 2"
+ :name "example2"
  :customization (;; Main org collection customization
                  (org-use-speed-commands t)
                  (org-todo-keywords ((sequence "TODO" "DONE")))

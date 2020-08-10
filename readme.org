@@ -562,6 +562,29 @@ Also, I think I have a bug now in that org-agenda-files doens't switch
 between the /global/ global and the /collection/ global value
 correctly... Need to investigate more!
 
+Scenario:
+- Start minor mode in Org mode file in collection
+- Open agenda (sticky)
+- Open Org mode file outside collection
+
+Set temp variables at each step (in the opened buffer!) and debug as
+best possible.
+#+begin_src emacs-lisp
+  (setq step1 `(list :oaf ,org-agenda-files
+                     :ocg ,org-collection-global
+                     :ocgdp ,org-collection-global-defaults-plist))
+  (setq step2 `(list :oaf ,org-agenda-files
+                     :ocg ,org-collection-global
+                     :ocgdp ,org-collection-global-defaults-plist))
+  (setq step3 `(list :oaf ,org-agenda-files
+                     :ocg ,org-collection-global
+                     :ocgdp ,org-collection-global-defaults-plist))
+#+end_src
+
+Maybe =window-selection-change-functions= hook can be used instead.
+Only available from Emacs 27.1 though. But what the hell, if you want
+nice things - upgrade (sorry).
+
 * TODO Figure out how org-collection-reset should look like
 
 * Custom file link
