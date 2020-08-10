@@ -16,8 +16,7 @@ To reside in the directory root of a collection.")
   :tag "Org Collection"
   :group 'org)
 
-(defcustom org-collection-list-file
-  (locate-user-emacs-file "org-collections")
+(defcustom org-collection-list-file (locate-user-emacs-file "org-collections")
   "File in which to save the list of known collections."
   :type 'file)
 
@@ -32,10 +31,6 @@ t if Org collection should look for files in the directory.
 Otherwise, the value should be a list of fully-expanded directory
 names.  Org collection searches for files only in those
 directories.
-
-If you invoke the commands \\[ede] or \\[ede-new] on a directory
-that is not listed, Emacs will offer to add it to
-`org-collection-list-file'.
 
 Any other value disables searching for Org collection files."
   :group 'org-collection
@@ -63,6 +58,7 @@ This is intentional buffer local so that Org collection can keep
 track of buffers one by one.")
 ;; Org-collection-local is declared as permanent so that
 ;; mode-switching or mode-reloading doesn't invalidate the variable.
+;;;###autoload
 (put 'org-collection-buffer-cached 'permanent-local t)
 
 (defvar-local org-collection-local nil
@@ -247,25 +243,31 @@ case (and so far) better safe than sorry."
               (let ((collection (or org-collection-local
                                     (org-collection--try-get-collection default-directory))))
                 (when collection
-                  ;; Deal with global collection settings
+                  ;; Deal with global collection settings.  Only
+                  ;; configure it if it's different from an already
+                  ;; set global config.
                   (unless (eq collection org-collection-global)
+                    ;; If there is an existing setting, scratch that
+                    ;; one first to not leave any residue.
                     (when org-collection-global
                       (org-collection--unset-global))
                     (org-collection--set-global collection)
                     (org-collection--maybe-update-list collection))
-                  ;; Deal with buffer local collection settings
-                  ;; (Only for Org mode buffers!)
+                  ;; Deal with buffer local collection settings.
+                  ;; Local settings are only configured for Org mode
+                  ;; buffers out of principle.
                   (when (and (eq major-mode 'org-mode)
                              (not (eq collection org-collection-local)))
                     ;; If a local collection exist for the buffer
-                    ;; since before, unset it.
+                    ;; since before, unset it to make sure no unwanted
+                    ;; configs are left.
                     (when org-collection-local
                       (org-collection--unset-local (current-buffer) org-collection-local))
                     (org-collection--set-local (current-buffer) collection)
-                    ;; Also need to refresh Org mode if the collection
-                    ;; was found and in need of update.  Inhibit
-                    ;; messages from Org mode when doing this.  This
-                    ;; is unfortunately needed since the buffer local
+                    ;; Org mode needs a refresh if the collection was
+                    ;; found and in need of update.  Inhibit messages
+                    ;; from Org mode when doing this.  This is
+                    ;; unfortunately needed since the buffer local
                     ;; config might be different after Org collection
                     ;; has been set.
                     (let ((inhibit-message t))
@@ -392,11 +394,11 @@ emptied in `org-collection--unset-global-properties'."
 (defvar org-collection-mode-map
   (let ((map (make-sparse-keymap))
 	(pmap (make-sparse-keymap)))
-    (define-key pmap "a" 'org-collection-agenda)
+    (define-key pmap "z" 'org-collection-mode)
     ;; bind our submap into map
-    (define-key map "\C-c." pmap)
+    (define-key map "\C-c" pmap)
     map)
-  "Keymap used in project minor mode.")
+  "Keymap used in org collection global minor mode.")
 
 ;;;; Mode declarations
 

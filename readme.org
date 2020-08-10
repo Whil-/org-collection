@@ -585,6 +585,15 @@ Maybe =window-selection-change-functions= hook can be used instead.
 Only available from Emacs 27.1 though. But what the hell, if you want
 nice things - upgrade (sorry).
 
+** [2020-08-10 Mon] The mode line
+I did some crude visualization of which collection is active on the
+mode line. But it's not using best practices or anything. Let's have a
+look at improving that.
+
+See: [[info:elisp#Mode Line Format][info:elisp#Mode Line Format]] and take inspiration from how vc-mode
+works. See =vc-hooks.el= and for example variable =vc-mode= and
+function =vc-mode-line=.
+
 * TODO Figure out how org-collection-reset should look like
 
 * Custom file link
