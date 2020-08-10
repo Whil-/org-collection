@@ -70,6 +70,7 @@ This is intentional buffer local to help Org collection keeping
 track of buffers one by one.")
 ;; Org-collection-local is declared as permanent so that
 ;; mode-switching doesn't invalidate the variable.
+;;;###autoload
 (put 'org-collection-local 'permanent-local t)
 
 (defvar org-collection-global nil
@@ -277,10 +278,7 @@ case (and so far) better safe than sorry."
                        org-collection-global
                        (not org-collection-local))
               (org-collection--unset-global))
-            (if org-collection-global
-                (let ((name (plist-get org-collection-global ':name)))
-                  (setcar (cdr (assq 'org-collection-mode minor-mode-alist)) (format " OC(%s)" name)))
-              (setcar (cdr (assq 'org-collection-mode minor-mode-alist)) " OC"))
+            (org-collection-update-mode-line)
             (setq org-collection-buffer-cached t))
         (when hook-enabled (add-hook 'window-buffer-change-functions
                                      'org-collection-check-buffer-function))))))
@@ -400,13 +398,44 @@ emptied in `org-collection--unset-global-properties'."
     map)
   "Keymap used in org collection global minor mode.")
 
-;;;; Mode declarations
+;;;; Minor mode declarations
+
+(defcustom org-collection--mode-line-prefix " OC"
+  "Mode line lighter prefix for org collection."
+  :group 'org-collection
+  :type 'string)
+
+(defvar-local org-collection--mode-line org-collection--mode-line-prefix
+  "String displayed in the mode line when Org collection global
+  mode is turned on.")
+
+(defun org-collection-default-mode-line (collection)
+  "Report collection name in the modeline."
+  (let* ((name (plist-get collection ':name))
+         (location (plist-get collection ':location)))
+    (format "%s%s"
+            org-collection--mode-line-prefix
+            (if name
+                (format ":%s" name)
+              ""))))
+
+(defun org-collection-update-mode-line ()
+  "Set `org-collection-ligher'.
+The value is set in the current buffer, which should be a buffer
+that belongs to the COLLECETION.
+
+Uses buffer-local variable `org-collection-global' to determine
+how the mode-line shall look."
+  (let ((mode-line (org-collection-default-mode-line org-collection-global)))
+    (setq org-collection--mode-line mode-line)
+    (force-mode-line-update)
+    mode-line))
 
 ;;;###autoload
 (define-minor-mode org-collection-mode
   "Comment."
   :init-value nil
-  :lighter " OC"
+  :lighter org-collection--mode-line
   :keymap org-collection-mode-map
   :global t
   :version "27.1"
