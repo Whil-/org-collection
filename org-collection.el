@@ -1,4 +1,4 @@
-;;; oc.el -*- lexical-binding: t; sentence-end-double-space: t -*-
+;;; org-collection.el -*- lexical-binding: t; sentence-end-double-space: t -*-
 
 ;;; Code:
 
@@ -427,6 +427,6 @@ emptied in `org-collection--unset-global-properties'."
 
 (add-hook 'project-find-functions #'org-collection--try-get-collection)
 
-(provide 'oc)
+(provide 'org-collection)
 
 ;;; org-collection.el ends here
