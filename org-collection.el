@@ -47,6 +47,19 @@ declared as an absolut path."
   :group 'org-collection
   :type 'file)
 
+(defcustom org-collection-variables '((":path:" . (lambda () default-directory)))
+  "List of variables to be used in an org-collection-file.
+The variables are literal values that will be replaced with the
+output from the associated function before the configuration is
+read and evaluated.
+
+This is configured using an alist with keys as the literals to
+replace and functions for determining the value that is to be put
+instead."
+  :group 'org-collection
+  :type '(alist :key-type string :value-type: function
+                :tag "Alist of variable and function"))
+
 ;;;; Management variables
 
 (defvar-local org-collection-buffer-cached nil
@@ -104,15 +117,20 @@ Directories are okay to scan only if specified by
 	   (member dir org-collection-directories))))
 
 (defun org-collection--set-global (collection)
-  "Configure global customization for active Org collection.
-"
+  "Configure global customization for active Org collection."
   (let* ((location (plist-get collection ':location))
          (customization-alist (plist-get collection ':customization))
+         (require-alist (plist-get collection ':require))
          (id-file (expand-file-name org-collection-default-id-locations-file
                                     location)))
     (org-collection--set-global-properties `((org-directory ,location)
                                              (org-id-locations-file ,id-file)
                                              (org-id-track-globally t)))
+    (dolist (package require-alist)
+      (condition-case nil
+          (unless (featurep package)
+            (require package))
+        (file-missing (warn "Could not load %s" (symbol-name package)))))
     (org-collection--set-global-properties customization-alist)
     (org-id-locations-load)
     (setq org-collection-global collection)))
@@ -357,6 +375,12 @@ location of that collection matches `default-directory'"
           ((file-readable-p file)
            (with-temp-buffer
              (insert-file-contents file)
+             (dolist (config org-collection-variables)
+               (let ((from-str (car config))
+                     (to-str (funcall (cdr config))))
+                 (save-excursion
+                   (while (search-forward from-str nil t)
+                     (replace-match to-str)))))
              (condition-case-unless-debug nil
                  (let ((read-circle nil))
                    (setq collection (cdr (read (current-buffer)))))

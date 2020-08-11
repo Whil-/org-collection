@@ -594,7 +594,18 @@ See: [[info:elisp#Mode Line Format][info:elisp#Mode Line Format]] and take inspi
 works. See =vc-hooks.el= and for example variable =vc-mode= and
 function =vc-mode-line=.
 
-* TODO Figure out how org-collection-reset should look like
+** [2020-08-10 Mon] Testconfiguration
+When setting up a test configuration I'm finding some issues.
+
+1. Requiring packages that aren't loaded by default. I'm getting
+   issues with org-brain and org-agenda currently.
+
+   Solution? Trying to introduce a block for requiring those packages
+
+2. Paths that needs to be set relative to current directory. That's
+   not possible for some variables as I can see. In particular
+   Org-brain-path. Ideally it would be based on Org-directory, but
+   it's not.
 
 * Custom file link
 ** Idea
