@@ -607,6 +607,17 @@ When setting up a test configuration I'm finding some issues.
    Org-brain-path. Ideally it would be based on Org-directory, but
    it's not.
 
+** [2020-08-17 Mon] The woes of reloading org mode
+Capture templates aren't happy when I'm forcefully reloading org mode
+in the buffer. The preparation done of the capture buffer basically
+gets ruined.
+
+The remedy (at least for now) seems to be to let Org collection be
+/even more/ aggressive in terms of events! If I check every new file
+that is loaded, as soon as I can, to see if org collection should be
+activated, then the mode doesn't enforce a reload when org capture
+creates the indirect buffer for the capture. All is well again.
+
 * Custom file link
 ** Idea
 Would be cool to be able to create links between collections based on
