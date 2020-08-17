@@ -29,14 +29,16 @@ the Org mode default.
 
 Parameters relying on a filesystem path should by default be set to be
 relative to the active org collection path:
-- org-directory
-- org-id-locations-file
--
+- =org-directory= (set to =default-directory=)
+- =org-id-locations-file= (set to default name inside path for the
+  collection)
 
 Some other parameters that makes sense to switch from the otherwise
 default Org mode default when in Org collection mode:
-- org-id-track-globally (enforce it, maybe with an override option)
--
+- =org-id-track-globally= (enforce it, maybe with an override option)
+- =org-id-locations-file-relative= (enable relative paths, if not the
+  collection will not (by default) be portable between
+  filesystem-locations)
 
 * Initial pitch
 :PROPERTIES:

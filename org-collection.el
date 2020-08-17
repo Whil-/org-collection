@@ -47,6 +47,15 @@ declared as an absolut path."
   :group 'org-collection
   :type 'file)
 
+;(defcustom org-collection-default-id-locations-file-relative t
+;  "Override value of `org-id-locations-file-relative' for Org collections.
+;For collections to be portable everything should be relative to
+;the collection path by default.  This customization sets that
+;default.  If set to nil, use value from
+;`org-id-locations-file-relative' instead."
+;  :group 'org-collection
+;  :type 'boolean)
+
 (defcustom org-collection-variables '((":path:" . (lambda () default-directory)))
   "List of variables to be used in an org-collection-file.
 The variables are literal values that will be replaced with the
@@ -125,7 +134,8 @@ Directories are okay to scan only if specified by
                                     location)))
     (org-collection--set-global-properties `((org-directory ,location)
                                              (org-id-locations-file ,id-file)
-                                             (org-id-track-globally t)))
+                                             (org-id-track-globally t)
+                                             (org-id-locations-file-relative t)))
     (dolist (package require-alist)
       (condition-case nil
           (unless (featurep package)
@@ -188,7 +198,8 @@ hack until those things get support for org collections."
                            org-agenda-files
                            org-todo-keywords
                            org-id-locations-file
-                           org-id-track-globally)))
+                           org-id-track-globally
+                           org-id-locations-file-relative)))
     (dolist (property property-alist)
       (let* ((symbol (car property))
              (value (cadr property))
