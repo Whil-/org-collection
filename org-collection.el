@@ -484,12 +484,14 @@ how the mode-line shall look."
          (advice-add #'org-mode :before #'org-collection-check-buffer-function)
          (add-hook 'find-file-hook #'org-collection-check-buffer-function)
          (add-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
+         (add-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
          (org-collection-check-buffer-function))
         (t
          ;; Mode was turned off (or we didn't turn it on)
          (advice-remove #'org-mode #'org-collection-check-buffer-function)
          (remove-hook 'find-file-hook #'org-collection-check-buffer-function)
          (remove-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
+         (remove-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
          ;; Unset after hook is removed. Saves one unwind-protect!
          (org-collection--unset)
          (setq org-collection-list nil))))
