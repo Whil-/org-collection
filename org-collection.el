@@ -443,6 +443,7 @@ emptied in `org-collection--unset-global-properties'."
 (defvar-local org-collection--mode-line org-collection--mode-line-prefix
   "String displayed in the mode line when Org collection global
   mode is turned on.")
+(put 'org-collection--mode-line 'permanent-local t)
 
 (defun org-collection-default-mode-line (collection)
   "Report collection name in the modeline."
