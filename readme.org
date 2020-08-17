@@ -618,6 +618,24 @@ that is loaded, as soon as I can, to see if org collection should be
 activated, then the mode doesn't enforce a reload when org capture
 creates the indirect buffer for the capture. All is well again.
 
+Update in the evening; Getting into even more similar issues puts more
+fule on the fire. Reloading Org mode really doesn't integrate well
+with other things. Most of the issues (maybe all?) I'm having are with
+indirect buffers or similar. Maybe if I could make sure to /always/ do
+the org collection check before Org mode is actually loaded. That way
+I would basically never need to reload Org mode unless switching
+between already opened buffers in different collections. According to
+the following stackoverflow-questions/answers to similar issues:
+- https://stackoverflow.com/questions/19280851/how-to-keep-dir-local-variables-when-switching-major-modes/
+- https://emacs.stackexchange.com/questions/20753/call-a-function-before-a-specific-major-mode-starts
+
+Org collection should probably use an advice on Org mode! Emacs manual
+writes that it's not recommended. Especially for Emacs built in code.
+So if Org collection at any point in time makes it into Org mode, this
+advice will have to go. If it's inside Org mode, then Org mode itself
+could make sure to run the Org collection check when needed though, so
+in that case everything should work out just fine anyhow. Swell times.
+
 * Custom file link
 ** Idea
 Would be cool to be able to create links between collections based on

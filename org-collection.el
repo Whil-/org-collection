@@ -273,10 +273,7 @@ case (and so far) better safe than sorry."
                     (org-collection--set-global collection)
                     (org-collection--maybe-update-list collection))
                   ;; Deal with buffer local collection settings.
-                  ;; Local settings are only configured for Org mode
-                  ;; buffers out of principle.
-                  (when (and (eq major-mode 'org-mode)
-                             (not (eq collection org-collection-local)))
+                  (when (not (eq collection org-collection-local))
                     ;; If a local collection exist for the buffer
                     ;; since before, unset it to make sure no unwanted
                     ;; configs are left.
@@ -289,9 +286,12 @@ case (and so far) better safe than sorry."
                     ;; unfortunately needed since the buffer local
                     ;; config might be different after Org collection
                     ;; has been set.
-                    (let ((inhibit-message t))
-                      (org-mode-restart))))))
-            ;; Do some more checks to see if something should be disabled!
+                    (when (eq major-mode 'org-mode)
+                      (let ((inhibit-message t))
+                        (org-mode-restart)))))))
+            ;; If major mode is Org and local settings are not set,
+            ;; make sure to also unset global settings if they happen
+            ;; to be set.
             (when (and (eq major-mode 'org-mode)
                        org-collection-global
                        (not org-collection-local))
@@ -469,13 +469,15 @@ how the mode-line shall look."
          ;; Try to load the list file before enabling the event. Saves
          ;; one unwind-protect!
          (org-collection--try-load-list-file)
-         (add-hook 'find-file-hook 'org-collection-check-buffer-function)
-         (add-hook 'window-buffer-change-functions 'org-collection-check-buffer-function)
+         (advice-add #'org-mode :before #'org-collection-check-buffer-function)
+         (add-hook 'find-file-hook #'org-collection-check-buffer-function)
+         (add-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
          (org-collection-check-buffer-function))
         (t
          ;; Mode was turned off (or we didn't turn it on)
-         (remove-hook 'find-file-hook 'org-collection-check-buffer-function)
-         (remove-hook 'window-buffer-change-functions 'org-collection-check-buffer-function)
+         (advice-remove #'org-mode #'org-collection-check-buffer-function)
+         (remove-hook 'find-file-hook #'org-collection-check-buffer-function)
+         (remove-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
          ;; Unset after hook is removed. Saves one unwind-protect!
          (org-collection--unset)
          (setq org-collection-list nil))))
