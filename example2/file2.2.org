@@ -1,0 +1,8 @@
+#+TODO: Project Todo | Done
+* Project Note 1
+:PROPERTIES:
+:ID:       960682d4-a59f-47e7-9145-4c3a6499d252
+:END:
+
+* Todo Note 2
+[[id:960682d4-a59f-47e7-9145-4c3a6499d252][Note 1]]

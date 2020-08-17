@@ -2,10 +2,11 @@
 (org-collection-definition
  :name "example1"
  :customization (;; Main org collection customization
-                 (org-use-speed-commands nil)
+                 (org-use-speed-commands t)
+                 (org-hide-leading-stars t)
+                 (org-id-method ts)
                  (org-todo-keywords ((sequence "MAYBE" "TODO" "DONE")))
                  (org-log-done nil)
 
                  ;; Agenda customizations
-                 (org-agenda-files ("agenda1.org" "agenda2.org"))
-                 (org-agenda-file-regexp ".*\\.org\\'")))
+                 (org-agenda-files ("file1.1.org" "file1.2.org"))))

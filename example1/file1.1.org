@@ -1,14 +1,14 @@
-* TODO Note 1
+* MAYBE Note 1
 :PROPERTIES:
-:ID:       20200809T051958.452815
+:ID:       20200728T165929.414782
 :END:
 :LOGBOOK:
 - State "TODO"       from              [2020-07-28 Tue 15:07]
 :END:
 
-* DONE Note 2
+** DONE Note 2
 CLOSED: [2020-07-28 Tue 15:07]
 :LOGBOOK:
 - State "DONE"       from              [2020-07-28 Tue 15:07]
 :END:
-[[id:20200809T051958.452815][Note 1]]
+[[id:20200728T165929.414782][Note 1]]

@@ -1,14 +1,14 @@
-* MAYBE Note 1
+* TODO Note 1
 :PROPERTIES:
-:ID:       20200728T165929.414782
+:ID:       f846b204-65b8-4972-9d67-ddf4d45ed603
 :END:
 :LOGBOOK:
 - State "TODO"       from              [2020-07-28 Tue 15:07]
 :END:
 
-* DONE Note 2
+** DONE Note 2
 CLOSED: [2020-07-28 Tue 15:07]
 :LOGBOOK:
 - State "DONE"       from              [2020-07-28 Tue 15:07]
 :END:
-[[id:20200728T165929.414782][Note 1]]
+[[id:f846b204-65b8-4972-9d67-ddf4d45ed603][Note 1]]
