@@ -262,11 +262,19 @@ case (and so far) better safe than sorry."
                  (not org-collection-local)))
     ;; Wrap the whole within an unwind-protect which disables the
     ;; hook, to prevent infinite loops
-    (let ((hook-enabled (memq 'org-collection-check-buffer-function window-buffer-change-functions)))
+    (let ((advice1-enabled (advice-member-p 'org-collection-check-buffer-function 'org-mode))
+          (hook1-enabled (memq 'org-collection-check-buffer-function window-buffer-change-functions))
+          (hook2-enabled (memq 'org-collection-check-buffer-function window-selection-change-functions))
+          (hook3-enabled (memq 'org-collection-check-buffer-function find-file-hook)))
       (unwind-protect
           (progn
-            (when hook-enabled (remove-hook 'window-buffer-change-functions
-                                            'org-collection-check-buffer-function))
+            (when advice1-enabled (advice-remove #'org-mode #'org-collection-check-buffer-function))
+            (when hook1-enabled (remove-hook 'window-buffer-change-functions
+                                             #'org-collection-check-buffer-function))
+            (when hook2-enabled (remove-hook 'window-selection-change-functions
+                                             #'org-collection-check-buffer-function))
+            (when hook3-enabled (remove-hook 'find-file-hook
+                                             #'org-collection-check-buffer-function))
             ;; Do some more checks to see if a collection really should be enabled
             (when (and (stringp default-directory)
                        (org-collection--directory-p default-directory))
@@ -309,8 +317,13 @@ case (and so far) better safe than sorry."
               (org-collection--unset-global))
             (org-collection-update-mode-line)
             (setq org-collection-buffer-cached t))
-        (when hook-enabled (add-hook 'window-buffer-change-functions
-                                     'org-collection-check-buffer-function))))))
+        (when advice1-enabled (advice-add #'org-mode :before #'org-collection-check-buffer-function))
+        (when hook1-enabled (add-hook 'window-buffer-change-functions
+                                      #'org-collection-check-buffer-function))
+        (when hook2-enabled (add-hook 'window-selection-change-functions
+                                      #'org-collection-check-buffer-function))
+        (when hook3-enabled (add-hook 'find-file-hook
+                                      #'org-collection-check-buffer-function))))))
 
 (defun org-collection--try-load-list-file ()
   "If the collection list have not been loaded from file, load it."
