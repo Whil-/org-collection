@@ -62,9 +62,9 @@ used:
 - :customization :: Value is an association list of org customizations
   and their values. The associated value of each element in the list
   is stored in the CAR of the CDR of the element. Only defcustoms
-  starting with =org-=, =ol-= and =ox-= are allowed here. Note that
-  quoting isn't supported here, as this list is seen as data not to be
-  evaluated. No evaluation means no quoting. [fn:1]
+  starting with =org-=, =ol-= and =ox-= are allowed. Note that quoting
+  isn't supported, as this list is seen as data not to be evaluated.
+  No evaluation means no need for quoting. [fn:1]
 
 More properties can be added but won't be used in any way (right now
 anyhow).
