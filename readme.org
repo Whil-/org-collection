@@ -314,7 +314,11 @@ a good thing. Because while Org mode may often start to be used as a
 task/project manager software, it's useful in a much wider context
 than that!
 
-* Custom file link
-** Idea
+* Misc
+Read about some thoughts while building this here:
+- [[file:ramblings.org]]
+
+* Potential future ideas
+** Custom file link
 Would be cool to be able to create links between collections based on
 collection name and note ID's.
