@@ -1,4 +1,4 @@
-#+TITLE: Org collections readme
+#+TITLE: Org collection readme
 * Introduction
 ** Goals
 The goal is to wrap org-mode customizations into collections, or
@@ -82,7 +82,7 @@ of existing configurations now requires "unquoting".
 
 * Convenient functions
 A function, =org-collection-refresh= is provided for reloaing
-org-collections (to make sure changes take effect).
+org-collection (to make sure changes take effect).
 
 A function, =org-collection-goto= is provided for visiting a
 collection (using find-file to the path of the collection).

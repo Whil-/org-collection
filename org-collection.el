@@ -49,7 +49,7 @@
 To reside in the directory root of a collection.")
 
 (defgroup org-collection nil
-  "Options concerning configuring Org collections."
+  "Options concerning configuring Org collection."
   :tag "Org Collection"
   :group 'org)
 
@@ -85,7 +85,7 @@ declared as an absolut path."
   :type 'file)
 
 ;(defcustom org-collection-default-id-locations-file-relative t
-;  "Override value of `org-id-locations-file-relative' for Org collections.
+;  "Override value of `org-id-locations-file-relative' for Org collection.
 ;For collections to be portable everything should be relative to
 ;the collection path by default.  This customization sets that
 ;default.  If set to nil, use value from
@@ -230,7 +230,7 @@ function, the value of that property is set globally for the key.
 
 This is mostly discouraged but some things in the Org universe
 (still) requires globals to work.  This should be considered a
-hack until those things get support for org collections."
+hack until those things get support for org collection."
   (let ((allowed-globals '(org-directory
                            org-agenda-files
                            org-todo-keywords
