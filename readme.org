@@ -19,7 +19,7 @@ The statements above lead to a couple of principles:
 
 * List of Org parameters with collection defaults
 It makes sense for some parameters to have defaults other than the
-"global" defaults that can be configured in the emacs initailization.
+"global" defaults that can be configured in the emacs initiailization.
 
 These parameters all have customizations within Org collection with
 prefixes =org-collection-default=. Setting any of these parameters
@@ -476,7 +476,7 @@ default-directory is preferred.
   - Nothing
 
 Determining if org-collection customizations are active is done
-primarily based on two variables:
+primarily based on these variables:
 - org-collection-global
 - org-collection-local (buffer local)
 - org-collection-cached (buffer local)

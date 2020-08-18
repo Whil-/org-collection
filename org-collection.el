@@ -112,7 +112,7 @@ that has been made, to be able to reset them when the mode is
 disabled.")
 
 ;;;; Functions working with collections
-
+;;;;; Misc Internals
 (defun org-collection--directory-p (dir)
   "Return non-nil if DIR is a safe directory to load.
 Directories are okay to scan only if specified by
@@ -235,6 +235,106 @@ to their default value."
           (value (pop org-collection-global-defaults-plist)))
       (set symbol value))))
 
+(defun org-collection--try-load-list-file ()
+  "If the collection list have not been loaded from file, load it."
+  (when (and (not org-collection-list)
+             (file-readable-p org-collection-list-file))
+    (with-temp-buffer
+      (insert-file-contents org-collection-list-file)
+      (condition-case-unless-debug nil
+          (let ((read-circle nil))
+            (setq org-collection-list (read (current-buffer))))
+        (end-of-file nil)))))
+
+(defun org-collection--maybe-update-list (collection)
+  ""
+  (let* ((name (plist-get collection ':name))
+         (location (plist-get collection ':location))
+         (location-existing (lax-plist-get org-collection-list name)))
+    (cond ((and (stringp location-existing)
+                (stringp location)
+                (not (equal (expand-file-name location-existing)
+                            (expand-file-name location))))
+           ;; Might add some user-interaction here later... Right now
+           ;; just overwrite existing with new.
+           (setq org-collection-list
+                 (plist-put org-collection-list name location))
+           (org-collection--try-persist org-collection-list))
+          ((not location-existing)
+           (setq org-collection-list
+                 (plist-put org-collection-list name location))
+           (org-collection--try-persist org-collection-list)))))
+
+(defun org-collection--try-persist (c-list)
+  "Persist collection if possible.
+If collection is not listed in `org-collection-list-file'
+already, persist it there."
+  (when org-collection-list-file
+    (save-excursion
+      (condition-case nil
+          (progn
+            (set-buffer (find-file-noselect org-collection-list-file t))
+            (erase-buffer)
+            (insert ";; Org collection list file.
+;; This contains a plist of known org collections with collection
+;; `:name' as key and filesystem location as value.\n")
+            (pp c-list (current-buffer))
+            (insert "\n")
+            (condition-case nil
+                (save-buffer 0)
+              (error
+	       (message "File %s could not be saved."
+		        org-collection-list-file)))
+            (kill-buffer (current-buffer)))
+        (error
+         (message "File %s could not be read." org-collection-list-file))))))
+
+(defun org-collection--try-get-collection (dir)
+  "Return an Org collection given a directory, if it exists and works.
+If `org-collection-global' already is set this is returned if the
+location of that collection matches `default-directory'"
+  (let ((file (expand-file-name org-collection-file dir))
+        (org-collection-global-location (plist-get org-collection-global ':location))
+        collection)
+    (cond ((and org-collection-global-location
+                (equal (expand-file-name org-collection-global-location)
+                       (expand-file-name default-directory)))
+           org-collection-global)
+          ((file-readable-p file)
+           (with-temp-buffer
+             (insert-file-contents file)
+             (dolist (config org-collection-variables)
+               (let ((from-str (car config))
+                     (to-str (funcall (cdr config))))
+                 (save-excursion
+                   (while (search-forward from-str nil t)
+                     (replace-match to-str)))))
+             (condition-case-unless-debug nil
+                 (let ((read-circle nil))
+                   (setq collection (cdr (read (current-buffer)))))
+               (end-of-file nil)))
+           (when collection
+             (plist-put collection :location default-directory))))))
+
+(defun org-collection--unset ()
+  "Unset mode.
+Resets buffers and global variables in org-collection.
+
+Some variables are expected to be reset elsewhere.  Notably
+`org-collection-global-defaults-plist' which is traversed and
+emptied in `org-collection--unset-global-properties'."
+  ;; Reset global state
+  (org-collection--unset-global)
+  ;; Reset buffer local states
+  (dolist (b (buffer-list))
+    (org-collection--unset-local b)
+    (with-current-buffer b
+      (when (eq major-mode 'org-mode)
+        (let ((inhibit-message t))
+          (org-mode-restart))))))
+
+;;;;; Important stuff
+
 (defun org-collection-check-buffer-function (&optional window)
   "Check current buffer and enable or disable a collection if needed.
 This function works with the current buffer and is responsible
@@ -325,116 +425,13 @@ case (and so far) better safe than sorry."
         (when hook3-enabled (add-hook 'find-file-hook
                                       #'org-collection-check-buffer-function))))))
 
-(defun org-collection--try-load-list-file ()
-  "If the collection list have not been loaded from file, load it."
-  (when (and (not org-collection-list)
-             (file-readable-p org-collection-list-file))
-    (with-temp-buffer
-      (insert-file-contents org-collection-list-file)
-      (condition-case-unless-debug nil
-          (let ((read-circle nil))
-            (setq org-collection-list (read (current-buffer))))
-        (end-of-file nil)))))
-
-
-(defun org-collection-validate-list ()
-    "Check all elements of the list.
-Check if they still exist and have the correct names."
-  t)
-
-(defun org-collection--maybe-update-list (collection)
-  ""
-  (let* ((name (plist-get collection ':name))
-         (location (plist-get collection ':location))
-         (location-existing (lax-plist-get org-collection-list name)))
-    (cond ((and (stringp location-existing)
-                (stringp location)
-                (not (equal (expand-file-name location-existing)
-                            (expand-file-name location))))
-           ;; Might add some user-interaction here later... Right now
-           ;; just overwrite existing with new.
-           (setq org-collection-list
-                 (plist-put org-collection-list name location))
-           (org-collection--try-persist org-collection-list))
-          ((not location-existing)
-           (setq org-collection-list
-                 (plist-put org-collection-list name location))
-           (org-collection--try-persist org-collection-list)))))
-
-(defun org-collection--try-persist (c-list)
-  "Persist collection if possible.
-If collection is not listed in `org-collection-list-file'
-already, persist it there."
-  (when org-collection-list-file
-    (save-excursion
-      (condition-case nil
-          (progn
-            (set-buffer (find-file-noselect org-collection-list-file t))
-            (erase-buffer)
-            (insert ";; Org collection list file.
-;; This contains a plist of known org collections with collection
-;; `:name' as key and filesystem location as value.\n")
-            (pp c-list (current-buffer))
-            (insert "\n")
-            (condition-case nil
-                (save-buffer 0)
-              (error
-	       (message "File %s could not be saved."
-		        org-collection-list-file)))
-            (kill-buffer (current-buffer)))
-        (error
-         (message "File %s could not be read." org-collection-list-file))))))
-
-(defun org-collection--try-get-collection (dir)
-  "Return an Org collection given a directory, if it exists and works.
-If `org-collection-global' already is set this is returned if the
-location of that collection matches `default-directory'"
-  (let ((file (expand-file-name org-collection-file dir))
-        (org-collection-global-location (plist-get org-collection-global ':location))
-        collection)
-    (cond ((and org-collection-global-location
-                (equal (expand-file-name org-collection-global-location)
-                       (expand-file-name default-directory)))
-           org-collection-global)
-          ((file-readable-p file)
-           (with-temp-buffer
-             (insert-file-contents file)
-             (dolist (config org-collection-variables)
-               (let ((from-str (car config))
-                     (to-str (funcall (cdr config))))
-                 (save-excursion
-                   (while (search-forward from-str nil t)
-                     (replace-match to-str)))))
-             (condition-case-unless-debug nil
-                 (let ((read-circle nil))
-                   (setq collection (cdr (read (current-buffer)))))
-               (end-of-file nil)))
-           (when collection
-             (plist-put collection :location default-directory))))))
+;;;;; Interactive stuff
 
 (defun org-collection-refresh ()
   "Refresh the configuration of the collection"
   (interactive)
   (org-collection--unset)
   (org-collection-check-buffer-function))
-
-(defun org-collection--unset ()
-  "Unset mode.
-Resets buffers and global variables in org-collection.
-
-Some variables are expected to be reset elsewhere.  Notably
-`org-collection-global-defaults-plist' which is traversed and
-emptied in `org-collection--unset-global-properties'."
-  ;; Reset global state
-  (org-collection--unset-global)
-  ;; Reset buffer local states
-  (dolist (b (buffer-list))
-    (org-collection--unset-local b)
-    (with-current-buffer b
-      (when (eq major-mode 'org-mode)
-        (let ((inhibit-message t))
-          (org-mode-restart))))))
-
 ;;;; Keymaps
 
 (defvar org-collection-mode-map
