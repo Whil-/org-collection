@@ -1,6 +1,6 @@
 #+TITLE: Org collections readme
 * Introduction
-* Goals
+** Goals
 The goal is to wrap org-mode customizations into collections, or
 project if you will, to encourage a more modularized way of thinking
 and to help Org grow up a bit. Org should be less tied to emacs and by
@@ -16,8 +16,83 @@ The statements above lead to a couple of principles:
 - Rely as little as possible on global configurations.
 - Make org collection configuration depend as little on Emacs as
   possible.
+* Installation
+Package currently only exist on Github and not in (M)ELPA. But using (for example) use-package and
+straight something like this will load this package:
 
-* List of Org parameters with collection defaults
+#+begin_src emacs-lisp
+  (use-package org-collection
+    :straight (org-collection :type git
+                              :host github
+                              :branch "master"
+                              :repo "Whil-/org-collection")
+    :after org
+    :init (org-collection-mode +1))
+#+end_src
+
+* Global minor mode
+The package provides a global minor mode ("OC" in mode-line). When
+active it (quite agressively) will load org collection customizations
+automatically when visiting files and folders for which a collection
+is defined.
+
+* Org collection definition and declaration
+An org collection is defined as a folder in which a
+collection-declaration-file named =.org-collection= is found.
+
+That file is assumed to contain a lisp datastructure on the following
+form:
+#+begin_src emacs-lisp
+  (org-collection-definition
+   :name "ShortName"
+   :require (package1 package2 ...)
+   :customization ((org-defcustom1 value)
+                   (org-defcustom2 value)
+                   (... ...)))
+#+end_src
+
+I.e. a list with first element =org-collection-definition= and the
+rest being a set of key-value properties where currently three keys are
+used:
+- :name :: Value is a short name for the collection. Used in mode line when
+  global minor mode is active.
+- :require :: Value is a list of packages that the collection depend
+  on, will be loaded when collection is activated, unless package
+  already is loaded.
+- :customization :: Value is an association list of org customizations
+  and their values. The associated value of each element in the list
+  is stored in the CAR of the CDR of the element. Only defcustoms
+  starting with =org-=, =ol-= and =ox-= are allowed here. Note that
+  quoting isn't supported here, as this list is seen as data not to be
+  evaluated. No evaluation means no quoting. [fn:1]
+
+More properties can be added but won't be used in any way (right now
+anyhow).
+
+Wildcards can be used within the file and will be replaced before
+evaluation. Currently there is one such wildcard defined, =:path:=.
+Wildcards declared in =org-collection-variables= will be automatically
+replaced with their value when loading the file.
+
+At the time of writing this there is no helpers or validators
+available for creating this.
+
+[fn:1] May be convenient to allow for quoting though, since copy-paste
+of existing configurations now requires "unquoting".
+
+* Convenient functions
+A function, =org-collection-refresh= is provided for reloaing
+org-collections (to make sure changes take effect).
+
+A function, =org-collection-goto= is provided for visiting a
+collection (using find-file to the path of the collection).
+
+* List of stored collections
+The package will keep track of previously visited collections using a
+file that by default is stored inside your emacs customization folder,
+called =org-collections=.
+
+* Org customizations changed by Org collection
 It makes sense for some parameters to have defaults other than the
 "global" defaults that can be configured in the emacs initiailization.
 
@@ -39,6 +114,20 @@ default Org mode default when in Org collection mode:
 - =org-id-locations-file-relative= (enable relative paths, if not the
   collection will not (by default) be portable between
   filesystem-locations)
+
+* Major mode...
+... does not yet exist. Would be cool though! In some form or another.
+
+What should it do? Who knows! I can imagine it giving a convenient
+overview of the files within the collection and a way of customizing
+it without having to manually changing =.org-collection=.
+
+But with the global minor mode allowing for augmenting the Org mode
+customization for that folder, I'm starting to think that a major
+modes working with collections should be built outside of this
+package. Because all other already existing modes that work on sets of
+org mode files could be seen as "org collection major modes". Those
+modes just needs to be configured for the collection at hand.
 
 * Initial pitch
 :PROPERTIES:
