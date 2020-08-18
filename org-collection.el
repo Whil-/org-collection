@@ -432,6 +432,13 @@ case (and so far) better safe than sorry."
   (interactive)
   (org-collection--unset)
   (org-collection-check-buffer-function))
+
+(defun org-collection-goto (collection-name)
+  "Goto a collection."
+  (interactive (list (org-completing-read "Goto collection: " (map-keys org-collection-list))))
+  (let ((location (lax-plist-get org-collection-list collection-name)))
+    (find-file location)))
+
 ;;;; Keymaps
 
 (defvar org-collection-mode-map

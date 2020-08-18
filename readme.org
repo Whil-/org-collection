@@ -638,6 +638,12 @@ advice will have to go. If it's inside Org mode, then Org mode itself
 could make sure to run the Org collection check when needed though, so
 in that case everything should work out just fine anyhow. Swell times.
 
+** [2020-08-19 Wed] org-collection-goto!
+A small but useful function to help with switching between known
+collections is introduced, called =org-collection-goto=.
+
+Also..
+
 * Custom file link
 ** Idea
 Would be cool to be able to create links between collections based on
