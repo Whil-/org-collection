@@ -89,8 +89,8 @@ collection (using find-file to the path of the collection).
 
 * List of stored collections
 The package will keep track of previously visited collections using a
-file that by default is stored inside your emacs customization folder,
-called =org-collections=.
+file called =org-collections= that by default is stored inside your
+emacs customization folder.
 
 * Org customizations changed by Org collection
 It makes sense for some parameters to have defaults other than the
