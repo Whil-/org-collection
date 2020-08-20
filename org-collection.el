@@ -92,7 +92,7 @@ declared as an absolut path."
 ;  :group 'org-collection
 ;  :type 'boolean)
 
-(defcustom org-collection-variables '((":path:" . (lambda () default-directory)))
+(defcustom org-collection-variables '((":path:" . (lambda (dir) dir)))
   "List of variables to be used in an org-collection-file.
 The variables are literal values that will be replaced with the
 output from the associated function before the configuration is
@@ -100,7 +100,8 @@ read and evaluated.
 
 This is configured using an alist with keys as the literals to
 replace and functions for determining the value that is to be put
-instead."
+instead.  The functions will be called with one argument: the
+directory of the collection."
   :group 'org-collection
   :type '(alist :key-type string :value-type: function
                 :tag "Alist of variable and function"))
@@ -137,6 +138,9 @@ track of buffers one by one.")
 Wen set, `org-collection-global' will be a collection object, as
 returned from `org-collection--try-get-collection'.")
 
+(defvar org-collection-lock nil
+  "Variable used for determining if there is an active lock.")
+
 (defvar org-collection-list nil
   "Variable used to cache the content of `org-collection-file'.
 Used only to reduce filesystem access.")
@@ -146,6 +150,9 @@ Used only to reduce filesystem access.")
 This variable is used internally to keep track of global changes
 that has been made, to be able to reset them when the mode is
 disabled.")
+
+(defvar org-collection-debug nil
+  "... Used for debugging purposes...")
 
 ;;;; Functions working with collections
 ;;;;; Internals
@@ -174,16 +181,16 @@ is configured globally."
          (require-alist (plist-get collection ':require))
          (id-file (expand-file-name org-collection-default-id-locations-file
                                     location)))
-    (org-collection--set-global-properties `((org-directory ,location)
-                                             (org-id-locations-file ,id-file)
-                                             (org-id-track-globally t)
-                                             (org-id-locations-file-relative t)))
+    (org-collection--set-global-variables `((org-directory ,location)
+                                            (org-id-locations-file ,id-file)
+                                            (org-id-track-globally t)
+                                            (org-id-locations-file-relative t)))
     (dolist (package require-alist)
       (condition-case nil
           (unless (featurep package)
             (require package))
         (file-missing (warn "Could not load %s" (symbol-name package)))))
-    (org-collection--set-global-properties customization-alist full)
+    (org-collection--set-global-variables customization-alist full)
     (org-id-locations-load)
     (setq org-collection-global collection)))
 
@@ -191,7 +198,7 @@ is configured globally."
   "Configure buffer local customization for active Org collection.
 "
   (let ((customization-alist (plist-get collection ':customization)))
-    (org-collection--set-local-properties buffer customization-alist)
+    (org-collection--set-local-variables buffer customization-alist)
     (with-current-buffer buffer
       (setq-local org-collection-local collection))))
 
@@ -199,7 +206,7 @@ is configured globally."
   "Unset Org collection custiomization.
 This will reset global Org mode customizations to the default, as
 set after emacs was started."
-  (org-collection--unset-global-properties)
+  (org-collection--unset-global-variables)
   (org-id-locations-load)
   (setq org-collection-global nil))
 
@@ -207,12 +214,12 @@ set after emacs was started."
   "Unset Org collection custiomization.
 This will reset buffer local Org mode customizations to the
 default, as set after emacs was started."
-  (org-collection--unset-local-properties buffer)
+  (org-collection--unset-local-variables buffer)
   (with-current-buffer buffer
     (setq org-collection-local nil
           org-collection-buffer-cached nil)))
 
-(defun org-collection--set-local-properties (buffer property-alist)
+(defun org-collection--set-local-variables (buffer property-alist)
   ""
   (with-current-buffer buffer
    (dolist (property property-alist)
@@ -228,7 +235,7 @@ default, as set after emacs was started."
              (t
               (warn "Invalid customization in Org collection: %s" name)))))))
 
-(defun org-collection--set-global-properties (property-alist &optional full)
+(defun org-collection--set-global-variables (property-alist &optional force)
   "Set global values for org collection.
 If a key in PROPERTY-ALIST match a predefined key within this
 function, the value of that property is set globally for the key.
@@ -237,7 +244,7 @@ This is mostly discouraged but some things in the Org universe
 (still) requires globals to work.  This should be considered a
 hack until those things get support for org collection.
 
-With optional argument FULL, all properties are set, even if
+With optional argument FORCE, all properties are set, even if
 they're outside of the list of allowed globals."
   (let ((allowed-globals '(org-directory
                            org-agenda-files
@@ -249,7 +256,7 @@ they're outside of the list of allowed globals."
       (let* ((symbol (car property))
              (value (cadr property))
              (name (symbol-name symbol)))
-        (when (and (or full
+        (when (and (or force
                        (member symbol allowed-globals))
                    (custom-variable-p symbol)
                    (not (equal (default-value symbol) value)))
@@ -257,7 +264,7 @@ they're outside of the list of allowed globals."
                 (plist-put org-collection-global-defaults-plist symbol (default-value symbol)))
           (set-default symbol value))))))
 
-(defun org-collection--unset-local-properties (buffer)
+(defun org-collection--unset-local-variables (buffer)
   ""
   (with-current-buffer buffer
     (let ((customization-alist (plist-get org-collection-local ':customization)))
@@ -272,7 +279,7 @@ they're outside of the list of allowed globals."
             (put symbol 'permanent-local nil)
             (kill-local-variable symbol)))))))
 
-(defun org-collection--unset-global-properties ()
+(defun org-collection--unset-global-variables ()
   "Reset global properties.
 Goes through plist `org-collection-global-defaults-plist' and (re)sets symbols
 to their default value."
@@ -351,7 +358,7 @@ location of that collection matches `default-directory'"
              (insert-file-contents file)
              (dolist (config org-collection-variables)
                (let ((from-str (car config))
-                     (to-str (funcall (cdr config))))
+                     (to-str (funcall (cdr config) dir)))
                  (save-excursion
                    (while (search-forward from-str nil t)
                      (replace-match to-str)))))
@@ -368,7 +375,7 @@ Resets buffers and global variables in org-collection.
 
 Some variables are expected to be reset elsewhere.  Notably
 `org-collection-global-defaults-plist' which is traversed and
-emptied in `org-collection--unset-global-properties'."
+emptied in `org-collection--unset-global-variables'."
   ;; Reset global state
   (org-collection--unset-global)
   ;; Reset buffer local states
@@ -393,33 +400,31 @@ This function tries to do as little as possible since it's
 supposed to be used in a hook that triggers quite often!  Maybe
 more conditional logic than needed due to that.  But in this
 case (and so far) better safe than sorry."
-  (when (or (not org-collection-buffer-cached)
-            ;; Even if cached, enabling might still be needed if the
-            ;; local buffer collection is set but different the
-            ;; global.
-            (and org-collection-local
-                 (not (eq org-collection-local
-                          org-collection-global)))
-            ;; *Experimental* Make sure Org collection doesn't pollute
-            ;; *the global Org mode settings in Org mode buffers that
-            ;; *don't belong to a collection.
-            (and (eq major-mode 'org-mode)
-                 org-collection-global
-                 (not org-collection-local)))
+  (when (and (not (minibufferp))
+             (or (not org-collection-buffer-cached)
+                 ;; Even if cached, enabling might still be needed if the
+                 ;; local buffer collection is set but different the
+                 ;; global.
+                 (and org-collection-local
+                      (not (eq org-collection-local
+                               org-collection-global)))
+                 ;; *Experimental* Make sure Org collection doesn't pollute
+                 ;; the global Org mode settings in Org mode buffers that
+                 ;; don't belong to a collection.
+                 (and (eq major-mode 'org-mode)
+                      org-collection-global
+                      (not org-collection-local))))
     ;; Wrap the whole within an unwind-protect which disables the
     ;; hook, to prevent infinite loops
     (let ((advice1-enabled (advice-member-p 'org-collection-check-buffer-function 'org-mode))
-          (hook1-enabled (memq 'org-collection-check-buffer-function window-buffer-change-functions))
-          (hook2-enabled (memq 'org-collection-check-buffer-function window-selection-change-functions))
-          (hook3-enabled (memq 'org-collection-check-buffer-function find-file-hook)))
+          (hook1-enabled (memq 'org-collection-check-buffer-function window-selection-change-functions))
+          (hook2-enabled (memq 'org-collection-check-buffer-function find-file-hook)))
       (unwind-protect
           (progn
             (when advice1-enabled (advice-remove #'org-mode #'org-collection-check-buffer-function))
-            (when hook1-enabled (remove-hook 'window-buffer-change-functions
+            (when hook1-enabled (remove-hook 'window-selection-change-functions
                                              #'org-collection-check-buffer-function))
-            (when hook2-enabled (remove-hook 'window-selection-change-functions
-                                             #'org-collection-check-buffer-function))
-            (when hook3-enabled (remove-hook 'find-file-hook
+            (when hook2-enabled (remove-hook 'find-file-hook
                                              #'org-collection-check-buffer-function))
             ;; Do some more checks to see if a collection really should be enabled
             (when (and (stringp default-directory)
@@ -464,11 +469,9 @@ case (and so far) better safe than sorry."
             (org-collection-update-mode-line)
             (setq org-collection-buffer-cached t))
         (when advice1-enabled (advice-add #'org-mode :before #'org-collection-check-buffer-function))
-        (when hook1-enabled (add-hook 'window-buffer-change-functions
+        (when hook1-enabled (add-hook 'window-selection-change-functions
                                       #'org-collection-check-buffer-function))
-        (when hook2-enabled (add-hook 'window-selection-change-functions
-                                      #'org-collection-check-buffer-function))
-        (when hook3-enabled (add-hook 'find-file-hook
+        (when hook2-enabled (add-hook 'find-file-hook
                                       #'org-collection-check-buffer-function))))))
 
 ;;;;; Interactive stuff
@@ -487,14 +490,15 @@ case (and so far) better safe than sorry."
 
 (defun org-collection-lock (collection-name)
   "Enforces customizations for a collection to always be active."
-  (interactive (list (org-completing-read "Goto collection: " (map-keys org-collection-list))))
+  (interactive (list (org-completing-read "Lock collection: " (map-keys org-collection-list))))
   (if (not org-collection-mode)
       (message "Cannot lock a collection unless org-collection-mode is turned on.")
+    (when org-collection-lock
+      org-collection-unlock)
     (let* ((dir (lax-plist-get org-collection-list collection-name))
            (collection (org-collection--try-get-collection dir)))
       ;; Unset all hooks and advices, since a lock is in place for the collection
       (advice-remove #'org-mode #'org-collection-check-buffer-function)
-      (remove-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
       (remove-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
       (remove-hook 'find-file-hook #'org-collection-check-buffer-function)
 
@@ -505,7 +509,8 @@ case (and so far) better safe than sorry."
       (org-collection--set-global collection t)
 
       ;; Mark the lock in the mode-line
-      (org-collection-update-mode-line t))))
+      (org-collection-update-mode-line t)
+      (setq org-collection-lock t))))
 
 (defun org-collection-unlock ()
   "Remove potential lock and enable events"
@@ -519,11 +524,11 @@ case (and so far) better safe than sorry."
     ;; Enable hooks and advices again
     (advice-add #'org-mode :before #'org-collection-check-buffer-function)
     (add-hook 'find-file-hook #'org-collection-check-buffer-function)
-    (add-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
     (add-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
 
     ;; Force a check of the active buffer
-    (org-collection-heck-buffer-function)))
+    (org-collection-check-buffer-function)
+    (setq org-collection-lock nil)))
 
 ;;;; Keymaps
 
@@ -564,7 +569,22 @@ that belongs to the COLLECETION.
 Uses buffer-local variable `org-collection-global' to determine
 how the mode-line shall look."
   (let ((mode-line (org-collection-mode-line org-collection-global lock)))
-    (setq org-collection--mode-line mode-line)
+    (cond (lock
+           ;; With a lock the modeline should be locked in all
+           ;; buffers. Since `org-collection--mode-line' is buffer
+           ;; local this requires iteration.
+           (dolist (b (buffer-list))
+             (with-current-buffer b
+               (setq org-collection--mode-line mode-line)))
+           ;; Also set the default value, but make sure it's reset
+           ;; when unlocked or the mode is disabled.
+           (setq org-collection-global-defaults-plist
+                 (plist-put org-collection-global-defaults-plist
+                            'org-collection--mode-line
+                            org-collection--mode-line-prefix))
+           (setq-default org-collection--mode-line mode-line))
+          (t
+           (setq org-collection--mode-line mode-line)))
     (force-mode-line-update)
     mode-line))
 
@@ -585,18 +605,44 @@ how the mode-line shall look."
          (org-collection--try-load-list-file)
          (advice-add #'org-mode :before #'org-collection-check-buffer-function)
          (add-hook 'find-file-hook #'org-collection-check-buffer-function)
-         (add-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
          (add-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
+
+         ;; Initial check
          (org-collection-check-buffer-function))
         (t
          ;; Mode was turned off (or we didn't turn it on)
          (advice-remove #'org-mode #'org-collection-check-buffer-function)
          (remove-hook 'find-file-hook #'org-collection-check-buffer-function)
-         (remove-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
          (remove-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
+
          ;; Unset after hook is removed. Saves one unwind-protect!
          (org-collection--unset)
          (setq org-collection-list nil))))
+
+;;;; Debugging
+
+(defun org-collection-trace ( &optional text )
+  (with-current-buffer (get-buffer-create "*OC Trace*")
+    (goto-char (point-max))
+    (if (stringp text)
+        (insert (concat text "\n"))
+      (insert "Tracing... Something happened\n"))))
+(defun org-collection-trace-org-mode (&optional _) (org-collection-trace "Advice: org-mode"))
+(defun org-collection-trace-find-file (&optional _) (org-collection-trace "Hook: find-file"))
+(defun org-collection-trace-window (&optional _) (org-collection-trace "Hook: window-selection-change-functions"))
+
+(defun org-collection-toggle-event-trace ()
+  (interactive)
+  (if (not  org-collection-debug)
+      (progn (advice-add #'org-mode :before #'org-collection-trace-org-mode)
+             (add-hook 'find-file-hook #'org-collection-trace-find-file)
+             (add-hook 'window-selection-change-functions #'org-collection-trace-window)
+             (setq org-collection-debug t))
+    (advice-remove #'org-mode #'org-collection-trace-org-mode)
+    (remove-hook 'find-file-hook #'org-collection-trace-find-file)
+    (remove-hook 'window-selection-change-functions #'org-collection-trace-window)
+    (setq org-collection-debug nil))
+  (message (if org-collection-debug "Debug on" "Debug off")))
 
 ;;;; Connect to emacs project and module provisioning
 
