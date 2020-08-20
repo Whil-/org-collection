@@ -270,7 +270,7 @@ to their default value."
   (while org-collection-global-defaults-plist
     (let ((symbol (pop org-collection-global-defaults-plist))
           (value (pop org-collection-global-defaults-plist)))
-      (set symbol value))))
+      (set-default symbol value))))
 
 (defun org-collection--try-load-list-file ()
   "If the collection list have not been loaded from file, load it."
