@@ -36,7 +36,6 @@
 ;; collection an auxiliary function is also provided:
 ;; `org-collection-goto'.
 ;;
-;;
 ;;; Code:
 ;;;; Dependencies
 (require 'org)
@@ -149,7 +148,7 @@ that has been made, to be able to reset them when the mode is
 disabled.")
 
 ;;;; Functions working with collections
-;;;;; Misc Internals
+;;;;; Internals
 (defun org-collection--directory-p (dir)
   "Return non-nil if DIR is a safe directory to load.
 Directories are okay to scan only if specified by
@@ -162,8 +161,14 @@ Directories are okay to scan only if specified by
       (and (listp org-collection-directories)
 	   (member dir org-collection-directories))))
 
-(defun org-collection--set-global (collection)
-  "Configure global customization for active Org collection."
+(defun org-collection--set-global (collection &optional full)
+  "Configure global customization for active Org collection.
+Set some Org mode properties globally for a COLLECTION, for it
+to work well with the rest of Org mode, for things not relying on
+buffer local configurations.
+
+With optional argument FULL, all customizations in a collection
+is configured globally."
   (let* ((location (plist-get collection ':location))
          (customization-alist (plist-get collection ':customization))
          (require-alist (plist-get collection ':require))
@@ -178,7 +183,7 @@ Directories are okay to scan only if specified by
           (unless (featurep package)
             (require package))
         (file-missing (warn "Could not load %s" (symbol-name package)))))
-    (org-collection--set-global-properties customization-alist)
+    (org-collection--set-global-properties customization-alist full)
     (org-id-locations-load)
     (setq org-collection-global collection)))
 
@@ -223,14 +228,17 @@ default, as set after emacs was started."
              (t
               (warn "Invalid customization in Org collection: %s" name)))))))
 
-(defun org-collection--set-global-properties (property-alist)
+(defun org-collection--set-global-properties (property-alist &optional full)
   "Set global values for org collection.
 If a key in PROPERTY-ALIST match a predefined key within this
 function, the value of that property is set globally for the key.
 
 This is mostly discouraged but some things in the Org universe
 (still) requires globals to work.  This should be considered a
-hack until those things get support for org collection."
+hack until those things get support for org collection.
+
+With optional argument FULL, all properties are set, even if
+they're outside of the list of allowed globals."
   (let ((allowed-globals '(org-directory
                            org-agenda-files
                            org-todo-keywords
@@ -241,7 +249,8 @@ hack until those things get support for org collection."
       (let* ((symbol (car property))
              (value (cadr property))
              (name (symbol-name symbol)))
-        (when (and (member symbol allowed-globals)
+        (when (and (or full
+                       (member symbol allowed-globals))
                    (custom-variable-p symbol)
                    (not (equal (default-value symbol) value)))
           (setq org-collection-global-defaults-plist
@@ -473,8 +482,48 @@ case (and so far) better safe than sorry."
 (defun org-collection-goto (collection-name)
   "Goto a collection."
   (interactive (list (org-completing-read "Goto collection: " (map-keys org-collection-list))))
-  (let ((location (lax-plist-get org-collection-list collection-name)))
-    (find-file location)))
+  (let ((dir (lax-plist-get org-collection-list collection-name)))
+    (find-file dir)))
+
+(defun org-collection-lock (collection-name)
+  "Enforces customizations for a collection to always be active."
+  (interactive (list (org-completing-read "Goto collection: " (map-keys org-collection-list))))
+  (if (not org-collection-mode)
+      (message "Cannot lock a collection unless org-collection-mode is turned on.")
+    (let* ((dir (lax-plist-get org-collection-list collection-name))
+           (collection (org-collection--try-get-collection dir)))
+      ;; Unset all hooks and advices, since a lock is in place for the collection
+      (advice-remove #'org-mode #'org-collection-check-buffer-function)
+      (remove-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
+      (remove-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
+      (remove-hook 'find-file-hook #'org-collection-check-buffer-function)
+
+      ;; Unset existing collection and buffer local configurations
+      (org-collection--unset)
+
+      ;; Enforce the whole collection to be global
+      (org-collection--set-global collection t)
+
+      ;; Mark the lock in the mode-line
+      (org-collection-update-mode-line t))))
+
+(defun org-collection-unlock ()
+  "Remove potential lock and enable events"
+  (interactive)
+  (if (not org-collection-mode)
+      (message "Org collection mode is not active, nothing to unlock.")
+
+    ;; Unset existing globals
+    (org-collection--unset-global)
+
+    ;; Enable hooks and advices again
+    (advice-add #'org-mode :before #'org-collection-check-buffer-function)
+    (add-hook 'find-file-hook #'org-collection-check-buffer-function)
+    (add-hook 'window-buffer-change-functions #'org-collection-check-buffer-function)
+    (add-hook 'window-selection-change-functions #'org-collection-check-buffer-function)
+
+    ;; Force a check of the active buffer
+    (org-collection-heck-buffer-function)))
 
 ;;;; Keymaps
 
@@ -487,7 +536,7 @@ case (and so far) better safe than sorry."
     map)
   "Keymap used in org collection global minor mode.")
 
-;;;; Minor mode declarations
+;;;; Mode line stuff
 
 (defcustom org-collection--mode-line-prefix " OC"
   "Mode line lighter prefix for org collection."
@@ -499,28 +548,27 @@ case (and so far) better safe than sorry."
   mode is turned on.")
 (put 'org-collection--mode-line 'permanent-local t)
 
-(defun org-collection-default-mode-line (collection)
+(defun org-collection-mode-line (collection &optional lock)
   "Report collection name in the modeline."
-  (let* ((name (plist-get collection ':name))
-         (location (plist-get collection ':location)))
-    (format "%s%s"
+  (let* ((name (plist-get collection ':name)))
+    (format "%s%s%s"
             org-collection--mode-line-prefix
-            (if name
-                (format ":%s" name)
-              ""))))
+            (if lock "!" "")
+            (if name (format ":%s" name) ""))))
 
-(defun org-collection-update-mode-line ()
-  "Set `org-collection-ligher'.
+(defun org-collection-update-mode-line (&optional lock)
+  "Set `org-collection--mode-line'.
 The value is set in the current buffer, which should be a buffer
 that belongs to the COLLECETION.
 
 Uses buffer-local variable `org-collection-global' to determine
 how the mode-line shall look."
-  (let ((mode-line (org-collection-default-mode-line org-collection-global)))
+  (let ((mode-line (org-collection-mode-line org-collection-global lock)))
     (setq org-collection--mode-line mode-line)
     (force-mode-line-update)
     mode-line))
 
+;;;; Minor mode declarations
 ;;;###autoload
 (define-minor-mode org-collection-mode
   "Comment."

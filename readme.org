@@ -87,6 +87,26 @@ org-collection (to make sure changes take effect).
 A function, =org-collection-goto= is provided for visiting a
 collection (using find-file to the path of the collection).
 
+** Locking a collection
+There is also the option of locking a collection in place. This
+removes all the dynamics from the minor mode and globally sets all
+customizations declared for the context. Functions for this are:
+- =org-collection-lock=
+- =org-collection-unlock=
+
+When a lock is enabled the mode-line for org-collection-mode will
+change from =OC:collection name= to =OC!:collection name= to signal
+that a lock is in place.
+
+A lock effectively means to set all customizations for a collection
+globally and disable all org collection hooks and advices that
+normally look at the active buffer for which collection to use.
+
+Removing a lock removes the customizations that were locked in place,
+resetting them to their global default values, enables the org
+collection hooks and advices and does an initial check of the local
+buffer to see if any collection should be activated directly.
+
 * List of stored collections
 The package will keep track of previously visited collections using a
 file called =org-collections= that by default is stored inside your
