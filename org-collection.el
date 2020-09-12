@@ -311,11 +311,11 @@ to their default value."
            ;; Might add some user-interaction here later... Right now
            ;; just overwrite existing with new.
            (setq org-collection-list
-                 (plist-put org-collection-list name location))
+                 (lax-plist-put org-collection-list name location))
            (org-collection--try-persist org-collection-list))
           ((not location-existing)
            (setq org-collection-list
-                 (plist-put org-collection-list name location))
+                 (lax-plist-put org-collection-list name location))
            (org-collection--try-persist org-collection-list)))))
 
 (defun org-collection--try-persist (c-list)
