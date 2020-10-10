@@ -367,7 +367,7 @@ location of that collection matches `default-directory'"
                    (setq collection (cdr (read (current-buffer)))))
                (end-of-file nil)))
            (when collection
-             (plist-put collection :location default-directory))))))
+             (plist-put collection :location dir))))))
 
 (defun org-collection--unset ()
   "Unset mode.
@@ -494,7 +494,7 @@ case (and so far) better safe than sorry."
   (if (not org-collection-mode)
       (message "Cannot lock a collection unless org-collection-mode is turned on.")
     (when org-collection-lock
-      org-collection-unlock)
+      (org-collection-unlock))
     (let* ((dir (lax-plist-get org-collection-list collection-name))
            (collection (org-collection--try-get-collection dir)))
       ;; Unset all hooks and advices, since a lock is in place for the collection
