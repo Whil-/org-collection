@@ -80,12 +80,51 @@ available for creating this.
 [fn:1] May be convenient to allow for quoting though, since copy-paste
 of existing configurations now requires "unquoting".
 
-* Convenient functions
+* Customizations
+** Org-collection-files-extension
+Use this to declare what file type extension the [[*Convenience functions][Convenience functions]]
+working with files in the collection should use when looking for
+available ... files! :D
+
+** Org-collection-scan-directories-recusively
+Use this to declare if the [[*Convenience functions][Convenience functions]] working with files in
+the collection should look recusively through folders or not.
+
+** Org customizations changed by Org collection
+It makes sense for some parameters to have defaults other than the
+"global" defaults that can be configured in the emacs initiailization.
+
+These parameters all have customizations within Org collection with
+prefixes =org-collection-default=. Setting any of these parameters
+shall deactivate the org collection default which means that the
+parameters will fall back on either any global user customization or
+the Org mode default.
+
+Parameters relying on a filesystem path should by default be set to be
+relative to the active org collection path:
+- =org-directory= (set to =default-directory=)
+- =org-id-locations-file= (set to default name inside path for the
+  collection)
+
+Some other parameters that makes sense to switch from the otherwise
+default Org mode default when in Org collection mode:
+- =org-id-track-globally= (enforce it, maybe with an override option)
+- =org-id-locations-file-relative= (enable relative paths. If not
+  relative the collection will not (by default) be portable between
+  filesystem-locations.)
+
+* Convenience functions
 A function, =org-collection-refresh= is provided for reloaing
 org-collection (to make sure changes take effect).
 
 A function, =org-collection-goto= is provided for visiting a
 collection (using find-file to the path of the collection).
+
+A function, =org-collection-visit-file= is provided for quickly
+visiting a file inside the currently active collection.
+
+A function, =org-collection-update-id-locations= is provided to update
+the ID locations for all org files within the collection.
 
 ** Locking a collection
 There is also the option of locking a collection in place. This
@@ -111,29 +150,6 @@ buffer to see if any collection should be activated directly.
 The package will keep track of previously visited collections using a
 file called =org-collections= that by default is stored inside your
 emacs customization folder.
-
-* Org customizations changed by Org collection
-It makes sense for some parameters to have defaults other than the
-"global" defaults that can be configured in the emacs initiailization.
-
-These parameters all have customizations within Org collection with
-prefixes =org-collection-default=. Setting any of these parameters
-shall deactivate the org collection default which means that the
-parameters will fall back on either any global user customization or
-the Org mode default.
-
-Parameters relying on a filesystem path should by default be set to be
-relative to the active org collection path:
-- =org-directory= (set to =default-directory=)
-- =org-id-locations-file= (set to default name inside path for the
-  collection)
-
-Some other parameters that makes sense to switch from the otherwise
-default Org mode default when in Org collection mode:
-- =org-id-track-globally= (enforce it, maybe with an override option)
-- =org-id-locations-file-relative= (enable relative paths, if not the
-  collection will not (by default) be portable between
-  filesystem-locations)
 
 * Major mode...
 ... does not yet exist. Would be cool though! In some form or another.

@@ -40,7 +40,7 @@
 ;;;; Dependencies
 (require 'org)
 
-;;;; Customizations
+;;;; (Global) Customizations
 
 (defconst org-collection-file ".org-collection"
   "Filename for a collection.
@@ -105,6 +105,18 @@ directory of the collection."
   :group 'org-collection
   :type '(alist :key-type string :value-type: function
                 :tag "Alist of variable and function"))
+
+;;;; (Potentially local) Customizations
+
+(defcustom org-collection-files-extension "org"
+  "The extension for org files in a collection."
+  :group 'org-collection
+  :type '(string))
+
+(defcustom org-collection-scan-directories-recursively t
+  "If subdirectories inside `org-collection' are considered part of the collection or not."
+  :group 'org-collection
+  :type '(boolean))
 
 ;;;; Management variables
 
@@ -386,7 +398,33 @@ emptied in `org-collection--unset-global-variables'."
         (let ((inhibit-message t))
           (org-mode-restart))))))
 
-;;;;; Important stuff
+(defun org-collection-files (&optional relative collection)
+  "Get all org files.
+If RELATIVE is t, then return relative paths and remove file
+extension.  Uses `org-global-collection' if `collection' is nil.
+Ignores \"dotfiles\"."
+  (let ((path (plist-get (or collection org-collection-global) ':location)))
+    (if relative
+        (mapcar #'org-collection-path-entry-name (org-collection-files))
+      (if org-collection-scan-directories-recursively
+          (directory-files-recursively
+           path (format "^[^.].*\\.%s$" org-collection-files-extension))
+        (directory-files
+         path t (format "^[^.].*\\.%s$" org-collection-files-extension))))))
+
+(defun org-collection-update-id-locations ()
+  "Scan `org-collection-files' using `org-id-update-id-locations'."
+  (interactive)
+  (org-id-update-id-locations (org-collection-files)))
+
+(defun org-collection-path-entry-name (path &optional collection)
+  "Get PATH as an entry name."
+  (let ((collection-path (plist-get (or collection org-collection-global) ':location)))
+    (string-remove-suffix (concat "." org-collection-files-extension)
+                          (file-relative-name (expand-file-name path)
+                                              (expand-file-name collection-path)))))
+
+;;;;; Main function dealing with collection state
 
 (defun org-collection-check-buffer-function (&optional window)
   "Check current buffer and enable or disable a collection if needed.
@@ -487,6 +525,17 @@ case (and so far) better safe than sorry."
   (interactive (list (org-completing-read "Goto collection: " (map-keys org-collection-list))))
   (let ((dir (lax-plist-get org-collection-list collection-name)))
     (find-file dir)))
+
+(defun org-collection-visit-file (collection-file-no-extension)
+  "Visit a file in a collection.
+`collection-file-no-extension' is a path relative to the current
+collection without file-extension."
+  (interactive (list (org-completing-read "Visit: " (org-collection-files t))))
+  (when-let* ((base-path (plist-get org-collection-global ':location))
+              (file-fullname (expand-file-name (format "%s.%s" collection-file-no-extension
+                                                       org-collection-files-extension)
+                                               base-path)))
+    (find-file file-fullname)))
 
 (defun org-collection-lock (collection-name)
   "Enforces customizations for a collection to always be active."
