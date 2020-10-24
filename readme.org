@@ -87,8 +87,9 @@ working with files in the collection should use when looking for
 available ... files! :D
 
 ** Org-collection-scan-directories-recusively
-Use this to declare if the [[*Convenience functions][Convenience functions]] working with files in
-the collection should look recusively through folders or not.
+Use this to declare if an org-collection applies to subfolders in the
+filesystem tree. As a consequence, the [[*Convenience functions][convenience functions]] that work
+on files in the collection will also be affected by this.
 
 ** Org customizations changed by Org collection
 It makes sense for some parameters to have defaults other than the

@@ -75,6 +75,8 @@ Any other value disables searching for Org collection files."
 			 (directory))
 		 (function :tag "Predicate")))
 
+;;;; (Potentially local) Customizations
+
 (defcustom org-collection-default-id-locations-file ".org-id-locations"
   "Default customization of `org-id-locations-file' within a collection.
 
@@ -105,8 +107,6 @@ directory of the collection."
   :group 'org-collection
   :type '(alist :key-type string :value-type: function
                 :tag "Alist of variable and function"))
-
-;;;; (Potentially local) Customizations
 
 (defcustom org-collection-files-extension "org"
   "The extension for org files in a collection."
@@ -357,29 +357,36 @@ already, persist it there."
 (defun org-collection--try-get-collection (dir)
   "Return an Org collection given a directory, if it exists and works.
 If `org-collection-global' already is set this is returned if the
-location of that collection matches `default-directory'"
-  (let ((file (expand-file-name org-collection-file dir))
-        (org-collection-global-location (plist-get org-collection-global ':location))
-        collection)
-    (cond ((and org-collection-global-location
-                (equal (expand-file-name org-collection-global-location)
-                       (expand-file-name default-directory)))
-           org-collection-global)
-          ((file-readable-p file)
-           (with-temp-buffer
-             (insert-file-contents file)
-             (dolist (config org-collection-variables)
-               (let ((from-str (car config))
-                     (to-str (funcall (cdr config) dir)))
-                 (save-excursion
-                   (while (search-forward from-str nil t)
-                     (replace-match to-str)))))
-             (condition-case-unless-debug nil
-                 (let ((read-circle nil))
-                   (setq collection (cdr (read (current-buffer)))))
-               (end-of-file nil)))
-           (when collection
-             (plist-put collection :location dir))))))
+location of that collection matches `default-directory'.
+
+If `org-collection-scan-directories-recursively' is not nil then
+a collection can also be returned for paths deeper in the
+filesystem-tree.  The deepest path takes precedence."
+  (when-let* ((c-dir (if org-collection-scan-directories-recursively
+                         (locate-dominating-file dir org-collection-file)
+                       dir))
+              (c-file (expand-file-name org-collection-file c-dir)))
+    (let ((org-collection-global-location (plist-get org-collection-global ':location))
+          collection)
+      (cond ((and org-collection-global-location
+                  (equal (expand-file-name org-collection-global-location)
+                         (expand-file-name c-dir)))
+             org-collection-global)
+            ((file-readable-p c-file)
+             (with-temp-buffer
+               (insert-file-contents c-file)
+               (dolist (config org-collection-variables)
+                 (let ((from-str (car config))
+                       (to-str (funcall (cdr config) c-dir)))
+                   (save-excursion
+                     (while (search-forward from-str nil t)
+                       (replace-match to-str)))))
+               (condition-case-unless-debug nil
+                   (let ((read-circle nil))
+                     (setq collection (cdr (read (current-buffer)))))
+                 (end-of-file nil)))
+             (when collection
+               (plist-put collection :location c-dir)))))))
 
 (defun org-collection--unset ()
   "Unset mode.
