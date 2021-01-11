@@ -407,8 +407,11 @@ collection without file-extension."
 	(pmap (make-sparse-keymap)))
     (define-key pmap "q" 'org-collection-mode)
     (define-key pmap "g" 'org-collection-goto)
+    (define-key pmap "r" 'org-collection-register-and-lock)
+    (define-key pmap "l" 'org-collection-lock)
+    (define-key pmap "u" 'org-collection-unlock)
     ;; bind our submap into map
-    (define-key map "\C-c z" pmap)
+    (define-key map "\C-cz" pmap)
     map)
   "Keymap used in org collection global minor mode.")
 
