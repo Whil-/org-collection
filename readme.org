@@ -9,16 +9,13 @@ step on the journey is taken. See more about motivation here:
 - [[id:20200729T125620.588871][Initial pitch]]
 
 Taking away the global mindset leaves something missing in between the
-whole of emacs and a singluar Org mode file. This whole is intended to
+whole of emacs and a singluar Org mode file. This hole is intended to
 be filled with the concept of an Org collection.
 
-The statements above lead to a couple of principles:
-- Rely as little as possible on global configurations.
-- Make org collection configuration depend as little on Emacs as
-  possible.
 * Installation
-Package currently only exist on Github and not in (M)ELPA. But using (for example) use-package and
-straight something like this will load this package:
+Package currently only exist on Github and not in (M)ELPA. But using
+(for example) use-package and straight something like this will load
+this package:
 
 #+begin_src emacs-lisp
   (use-package org-collection
@@ -31,10 +28,14 @@ straight something like this will load this package:
 #+end_src
 
 * Global minor mode
-The package provides a global minor mode ("OC" in mode-line). When
-active it (quite agressively) will load org collection customizations
-automatically when visiting files and folders for which a collection
-is defined.
+The package provides a global minor mode ("OC" in mode-line). It does
+nothing on it's own but provies a couple of functions which can be
+used to load, unload and switch between collections.
+
+Notably the following:
+- =org-collection-register-and-lock=
+- =org-collection-lock=
+- =org-collection-unlock=
 
 * Org collection definition and declaration
 An org collection is defined as a folder in which a
@@ -74,11 +75,13 @@ evaluation. Currently there is one such wildcard defined, =:path:=.
 Wildcards declared in =org-collection-variables= will be automatically
 replaced with their value when loading the file.
 
-At the time of writing this there is no helpers or validators
-available for creating this.
+At the time of writing this there are no helpers or validators
+available for creating this. Sorry.
 
-[fn:1] May be convenient to allow for quoting though, since copy-paste
-of existing configurations now requires "unquoting".
+[fn:1] This actually means quoting won't even work. This is
+unconvenient, since copy-paste of existing configurations now requires
+"unquoting". But there is no workaround in place for this at the
+moment.
 
 * Customizations
 ** Org-collection-files-extension
@@ -115,9 +118,6 @@ default Org mode default when in Org collection mode:
   filesystem-locations.)
 
 * Convenience functions
-A function, =org-collection-refresh= is provided for reloaing
-org-collection (to make sure changes take effect).
-
 A function, =org-collection-goto= is provided for visiting a
 collection (using find-file to the path of the collection).
 
@@ -127,25 +127,21 @@ visiting a file inside the currently active collection.
 A function, =org-collection-update-id-locations= is provided to update
 the ID locations for all org files within the collection.
 
-** Locking a collection
-There is also the option of locking a collection in place. This
-removes all the dynamics from the minor mode and globally sets all
-customizations declared for the context. Functions for this are:
+** Selecting a collection
+The main way of activating a collection is by locking it in place.
+Functions for this are:
 - =org-collection-lock=
 - =org-collection-unlock=
 
-When a lock is enabled the mode-line for org-collection-mode will
-change from =OC:collection name= to =OC!:collection name= to signal
-that a lock is in place.
+If no collection exist since before they can be enabled by providing a
+path using:
+- =org-collection-register-and-lock=
 
-A lock effectively means to set all customizations for a collection
-globally and disable all org collection hooks and advices that
-normally look at the active buffer for which collection to use.
+This will also enable =org-collection-lock= for this collection for
+the future.
 
-Removing a lock removes the customizations that were locked in place,
-resetting them to their global default values, enables the org
-collection hooks and advices and does an initial check of the local
-buffer to see if any collection should be activated directly.
+When a lock is enabled the mode-line for org-collection-mode will show
+=OC!:collection name= to signal that a collection is locked in place.
 
 * List of stored collections
 The package will keep track of previously visited collections using a
