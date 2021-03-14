@@ -70,11 +70,6 @@ used:
 More properties can be added but won't be used in any way (right now
 anyhow).
 
-Wildcards can be used within the file and will be replaced before
-evaluation. Currently there is one such wildcard defined, =:path:=.
-Wildcards declared in =org-collection-variables= will be automatically
-replaced with their value when loading the file.
-
 At the time of writing this there are no helpers or validators
 available for creating this. Sorry.
 
@@ -82,6 +77,14 @@ available for creating this. Sorry.
 unconvenient, since copy-paste of existing configurations now requires
 "unquoting". But there is no workaround in place for this at the
 moment.
+
+* Org collection pre-processing
+Before the collection definition is read there is a pre-processing step. In this pre-processing the content of the definition is parsed and some strings are replaced.
+
+Default replacements are listed here:
+- =:path:= :: Replaced with the full path to the current org collection folder.
+
+The replacements can be reconfigured with the variable =org-collection-variables=.
 
 * Customizations
 ** Org-collection-files-extension
