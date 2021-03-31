@@ -150,7 +150,10 @@ is configured globally."
             (require package))
         (file-missing (warn "Could not load %s" (symbol-name package)))))
     (org-collection--set-global-variables customization-alist full)
-    (org-id-locations-load)
+    ;; Ignore the error message that org-id-locations-load may
+    ;; display if a global org-id file is missing. It's noise at this location.
+    (let ((inhibit-message t))
+      (org-id-locations-load))
     (setq org-collection-global collection)))
 
 (defun org-collection--unset-global ()
@@ -158,7 +161,10 @@ is configured globally."
 This will reset global Org mode customizations to the default, as
 set after emacs was started."
   (org-collection--unset-global-variables)
-  (org-id-locations-load)
+  ;; Ignore the error message that org-id-locations-load may
+  ;; display if a global org-id file is missing. It's noise at this location.
+  (let ((inhibit-message t))
+    (org-id-locations-load))
   (setq org-collection-global nil))
 
 (defun org-collection--set-global-variables (property-alist &optional force)
