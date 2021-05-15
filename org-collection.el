@@ -32,9 +32,8 @@
 ;; `org-collection-mode' that tracks which collection is active, if
 ;; any.  And it provides commands to switch between collection.
 ;; Switching between collections is manual and
-;; `org-collection-register-and-lock' is the entry.  With registered
-;; collections a more convenient function, `org-collection-lock', is
-;; available.
+;; `org-collection-register' is the entry.  When registered
+;; collections can be enabled with `org-collection-load'.
 ;;
 ;; A bunch of auxiliary functions are provided as well to simplify
 ;; working with collections.  Like listing files and going to their
@@ -43,8 +42,10 @@
 ;;; Code:
 ;;;; Dependencies
 (require 'org)
+(require 'org-id)
+(require 'map)
 
-;;;; (Global) Customizations
+;;;; Customizations
 
 (defconst org-collection-file ".org-collection"
   "Filename for a collection.
@@ -59,8 +60,6 @@ To reside in the directory root of a collection.")
 (defcustom org-collection-list-file (locate-user-emacs-file "org-collections")
   "File in which to save the list of known collections."
   :type 'file)
-
-;;;; (Potentially local) Customizations
 
 (defcustom org-collection-default-id-locations-file ".org-id-locations"
   "Default customization of `org-id-locations-file' within a collection.
@@ -99,106 +98,104 @@ directory of the collection."
   :type '(string))
 
 (defcustom org-collection-scan-directories-recursively t
-  "If subdirectories inside `org-collection' are considered part of the collection or not."
+  "Determines if subdirectories are included in the collection.
+Decide if subdirectories inside `org-collection' are considered
+part of the collection or not."
   :group 'org-collection
   :type '(boolean))
 
 ;;;; Management variables
+(defvar org-collection-mode)
+(defvar org-collection nil
+  "Variable used for determining the active org-collection.
 
-(defvar org-collection-global nil
-  "Variable used for globally determining the active org-collection.
-
-Wen set, `org-collection-global' will be a collection object, as
+Wen set, `org-collection' will be a collection object, as
 returned from `org-collection--try-get-collection'.")
 
-(defvar org-collection-lock nil
-  "Variable used for determining if there is an active lock.")
+(defvar org-collection-active nil
+  "Variable used for determining if a collection is active.")
 
 (defvar org-collection-list nil
   "Variable used to cache the content of `org-collection-file'.
 Used mainly to reduce filesystem access.")
 
-(defvar org-collection-global-defaults-plist nil
-  "Plist of modified global variables and their defaults.
-This variable is used internally to keep track of global changes
-that has been made, to be able to reset them when the mode is
+(defvar org-collection-defaults-plist nil
+  "Plist of modified variables and their defaults.
+This variable is used internally to keep track of changes that
+has been made, to be able to reset them when the mode is
 disabled.")
 
 ;;;; Functions working with collections
 ;;;;; Internals
 
-(defun org-collection--set-global (collection &optional full)
-  "Configure global customization for active Org collection.
-Set some Org mode properties globally for a COLLECTION, for it
-to work well with the rest of Org mode, for things not relying on
-buffer local configurations.
-
-With optional argument FULL, all customizations in a collection
-is configured globally."
+(defun org-collection--set (collection)
+  "Configure customization for the loaded Org collection.
+Set some Org mode properties for a COLLECTION, for it to work well
+with the rest of Org mode, for things not relying on buffer local
+configurations."
   (let* ((location (plist-get collection ':location))
          (customization-alist (plist-get collection ':customization))
          (require-alist (plist-get collection ':require))
          (id-file (expand-file-name org-collection-default-id-locations-file
                                     location)))
-    (org-collection--set-global-variables `((org-directory ,location)
-                                            (org-id-locations-file ,id-file)
-                                            (org-id-track-globally t)
-                                            (org-id-locations-file-relative t)))
+    ;; Some things will always be set, no matter what the collection contains.
+    ;; Otherwise org-collection will not work correctly
+    (org-collection--set-variables `((org-directory ,location)
+                                     (org-id-locations-file ,id-file)
+                                     (org-id-track-globally t)
+                                     (org-id-locations-file-relative t)))
     (dolist (package require-alist)
       (condition-case nil
           (unless (featurep package)
             (require package))
         (file-missing (warn "Could not load %s" (symbol-name package)))))
-    (org-collection--set-global-variables customization-alist full)
+    (org-collection--set-variables customization-alist)
     ;; Ignore the error message that org-id-locations-load may
     ;; display if a global org-id file is missing. It's noise at this location.
+    ;; TODO this message inhibitation doesn't seem to work... Maybe fix someday.
     (let ((inhibit-message t))
       (org-id-locations-load))
-    (setq org-collection-global collection)))
+    (setq org-collection collection)))
 
-(defun org-collection--unset-global ()
+(defun org-collection--unset ()
   "Unset Org collection custiomization.
-This will reset global Org mode customizations to the default, as
-set after emacs was started."
-  (org-collection--unset-global-variables)
+This will reset Org mode customizations to their default, as set
+before the org-collection was loaded.
+
+Some variables are expected to be reset elsewhere.  Notably
+`org-collection-defaults-plist' which is traversed and emptied in
+`org-collection--unset-variables'."
+  (org-collection--unset-variables)
   ;; Ignore the error message that org-id-locations-load may
   ;; display if a global org-id file is missing. It's noise at this location.
   (let ((inhibit-message t))
     (org-id-locations-load))
-  (setq org-collection-global nil))
+  (setq org-collection nil))
 
-(defun org-collection--set-global-variables (property-alist &optional force)
-  "Set global values for org collection.
+(defun org-collection--set-variables (property-alist)
+  "Set values for org collection.
 If a key in PROPERTY-ALIST match a predefined key within this
-function, the value of that property is set globally for the key.
-
-This is mostly discouraged but some things in the Org universe
-(still) requires globals to work.  This should be considered a
-hack until those things get support for org collection.
-
-With optional argument FORCE, all properties are set, even if
-they're outside of the list of allowed globals."
+function, the value of that property is set for the key."
   (dolist (property property-alist)
     (let* ((symbol (car property))
            (value (cadr property))
            (name (symbol-name symbol)))
-      (when (and (or force
-                     (string-prefix-p "org-" name)
+      (when (and (or (string-prefix-p "org-" name)
                      (string-prefix-p "ol-" name)
                      (string-prefix-p "ox-" name))
                  (custom-variable-p symbol)
                  (not (equal (default-value symbol) value)))
-        (setq org-collection-global-defaults-plist
-              (plist-put org-collection-global-defaults-plist symbol (default-value symbol)))
+        (setq org-collection-defaults-plist
+              (plist-put org-collection-defaults-plist symbol (default-value symbol)))
         (set-default symbol value)))))
 
-(defun org-collection--unset-global-variables ()
-  "Reset global properties.
-Goes through plist `org-collection-global-defaults-plist' and (re)sets symbols
+(defun org-collection--unset-variables ()
+  "Reset properties.
+Goes through plist `org-collection-defaults-plist' and (re)sets symbols
 to their default value."
-  (while org-collection-global-defaults-plist
-    (let ((symbol (pop org-collection-global-defaults-plist))
-          (value (pop org-collection-global-defaults-plist)))
+  (while org-collection-defaults-plist
+    (let ((symbol (pop org-collection-defaults-plist))
+          (value (pop org-collection-defaults-plist)))
       (set-default symbol value))))
 
 (defun org-collection--try-load-list-file (&optional force)
@@ -268,7 +265,7 @@ This is in contrast to merely setting it to 0.  Based on `org-plist-delete'."
 
 (defun org-collection--try-get-collection (dir)
   "Return an Org collection given a directory, if it exists and works.
-If `org-collection-global' already is set this is returned if the
+If `org-collection' already is set this is returned if the
 location of that collection matches `default-directory'.
 
 If `org-collection-scan-directories-recursively' is not nil then
@@ -278,12 +275,12 @@ the filesystem-tree.  The deepest path takes precedence."
                          (locate-dominating-file dir org-collection-file)
                        dir))
               (c-file (expand-file-name org-collection-file c-dir)))
-    (let ((org-collection-global-location (plist-get org-collection-global ':location))
+    (let ((org-collection-location (plist-get org-collection ':location))
           collection)
-      (cond ((and org-collection-global-location
-                  (equal (expand-file-name org-collection-global-location)
+      (cond ((and org-collection-location
+                  (equal (expand-file-name org-collection-location)
                          (expand-file-name c-dir)))
-             org-collection-global)
+             org-collection)
             ((file-readable-p c-file)
              (with-temp-buffer
                (insert-file-contents c-file)
@@ -300,22 +297,12 @@ the filesystem-tree.  The deepest path takes precedence."
              (when collection
                (plist-put collection :location c-dir)))))))
 
-(defun org-collection--unset ()
-  "Unset mode.
-Resets global variables in org-collection.
-
-Some variables are expected to be reset elsewhere.  Notably
-`org-collection-global-defaults-plist' which is traversed and
-emptied in `org-collection--unset-global-variables'."
-  ;; Reset global state
-  (org-collection--unset-global))
-
 (defun org-collection-files (&optional relative collection)
   "Get all org files.
 If RELATIVE is t, then return relative paths and remove file
-extension.  Uses `org-global-collection' if `collection' is nil.
-Ignores \"dotfiles\"."
-  (let ((path (plist-get (or collection org-collection-global) ':location)))
+extension.  Uses `org-collection' if `collection' is nil.
+Ignores dotfiles."
+  (let ((path (plist-get (or collection org-collection) ':location)))
     (if relative
         (mapcar #'org-collection-path-entry-name (org-collection-files))
       (if org-collection-scan-directories-recursively
@@ -331,12 +318,38 @@ Ignores \"dotfiles\"."
 
 (defun org-collection-path-entry-name (path &optional collection)
   "Get PATH as an entry name."
-  (let ((collection-path (plist-get (or collection org-collection-global) ':location)))
+  (let ((collection-path (plist-get (or collection org-collection) ':location)))
     (string-remove-suffix (concat "." org-collection-files-extension)
                           (file-relative-name (expand-file-name path)
                                               (expand-file-name collection-path)))))
 
 ;;;;; Interactive stuff
+
+(defun org-collection-create (dir name)
+  "Create a template configuration file and register it."
+  (interactive "DCreate collection at location: \nsName of collection: ")
+  (let ((settings-file (expand-file-name org-collection-file dir)))
+    ;; Either warn that something's wrong, or execute!
+    (cond
+     ;; 1. No existing collection with that name exist
+     ((lax-plist-get org-collection-list name)
+      (message "Collection name already registered."))
+     ;; 2. No existing ocllection exist at that location since before
+     ((file-exists-p settings-file)
+      (message "Collection settings-file already exist."))
+     (t (let ((settings-buffer (find-file-noselect settings-file)))
+          (with-current-buffer settings-buffer
+            (insert (format "; -*- mode: emacs-lisp -*-
+;; template org-collection
+(org-collection-definition
+ :name \"%s\"
+ :require (org)
+ :customization
+ ((org-agenda-files (\":path:\"))))"
+                            name))
+            (save-buffer))
+          (org-collection-register dir)
+          (switch-to-buffer settings-buffer))))))
 
 (defun org-collection-goto (collection-name)
   "Goto a collection."
@@ -349,19 +362,19 @@ Ignores \"dotfiles\"."
 `collection-file-no-extension' is a path relative to the current
 collection without file-extension."
   (interactive (list (org-completing-read "Visit: " (org-collection-files t))))
-  (when-let* ((base-path (plist-get org-collection-global ':location))
+  (when-let* ((base-path (plist-get org-collection ':location))
               (file-fullname (expand-file-name (format "%s.%s" collection-file-no-extension
                                                        org-collection-files-extension)
                                                base-path)))
     (find-file file-fullname)))
 
-(defun org-collection-register-and-lock (directory)
+(defun org-collection-register (directory)
   "Opens a collection and registers it for easier future use."
   (interactive "Dorg-track directory: ")
   (let ((collection (org-collection--try-get-collection directory)))
     (cond (collection
            (org-collection--maybe-update-list collection)
-           (org-collection-lock (plist-get collection ':name)))
+           (org-collection-load (plist-get collection ':name)))
           (t
            (error
             (message "No collection found at given location. Could not load or register"))))))
@@ -375,13 +388,19 @@ collection without file-extension."
         (org-collection--lax-plist-delete org-collection-list collection-name))
   (org-collection--try-persist org-collection-list))
 
-(defun org-collection-lock (collection-name)
-  "Enforces customizations for a collection to always be active."
-  (interactive (list (org-completing-read "Lock collection: " (map-keys org-collection-list))))
+(defun org-collection-visit-settings (collection-name)
+  "Open collection settings file."
+  (interactive (list (org-completing-read "Visit settings for collection: " (map-keys org-collection-list))))
+  (let ((dir (lax-plist-get org-collection-list collection-name)))
+    (find-file (expand-file-name org-collection-file dir))))
+
+(defun org-collection-load (collection-name)
+  "Load customizations for a collection."
+  (interactive (list (org-completing-read "Load collection: " (map-keys org-collection-list))))
   (if (not org-collection-mode)
-      (message "Cannot lock a collection unless org-collection-mode is turned on.")
-    (when org-collection-lock
-      (org-collection-unlock))
+      (message "Cannot load a collection unless org-collection-mode is turned on.")
+    (when org-collection-active
+      (org-collection-unload))
     (let* ((dir (lax-plist-get org-collection-list collection-name))
            (collection (org-collection--try-get-collection dir)))
 
@@ -389,21 +408,21 @@ collection without file-extension."
       (org-collection--unset)
 
       ;; Enforce the whole collection to be global
-      (org-collection--set-global collection)
+      (org-collection--set collection)
 
-      ;; Mark the lock in the mode-line
+      ;; Mark the loaded collection in the mode-line
       (org-collection-update-mode-line t)
-      (setq org-collection-lock t))))
+      (setq org-collection-active t))))
 
-(defun org-collection-unlock ()
-  "Remove potential lock and enable events"
+(defun org-collection-unload ()
+  "Unload the loaded org collection."
   (interactive)
   (if (not org-collection-mode)
-      (message "Org collection mode is not active, nothing to unlock.")
+      (message "Org collection mode is not active, nothing to unload.")
 
     ;; Unset existing globals
-    (org-collection--unset-global)
-    (setq org-collection-lock nil)
+    (org-collection--unset)
+    (setq org-collection-active nil)
     (org-collection-update-mode-line)))
 
 ;;;; Keymaps
@@ -412,10 +431,12 @@ collection without file-extension."
   (let ((map (make-sparse-keymap))
 	(pmap (make-sparse-keymap)))
     (define-key pmap "q" 'org-collection-mode)
-    (define-key pmap "g" 'org-collection-goto)
-    (define-key pmap "r" 'org-collection-register-and-lock)
-    (define-key pmap "l" 'org-collection-lock)
-    (define-key pmap "u" 'org-collection-unlock)
+    (define-key pmap "c" 'org-collection-create)
+    (define-key pmap "r" 'org-collection-register)
+    (define-key pmap "l" 'org-collection-load)
+    (define-key pmap "u" 'org-collection-unload)
+    (define-key pmap "s" 'org-collection-visit-settings)
+    (define-key pmap "f" 'org-collection-visit-file)
     ;; bind our submap into map
     (define-key map "\C-cz" pmap)
     map)
@@ -428,38 +449,28 @@ collection without file-extension."
   :group 'org-collection
   :type 'string)
 
-(defvar-local org-collection--mode-line org-collection--mode-line-prefix
+(defvar org-collection--mode-line org-collection--mode-line-prefix
   "String displayed in the mode line when Org collection global
   mode is turned on.")
-(put 'org-collection--mode-line 'permanent-local t)
 
-(defun org-collection-mode-line (collection &optional lock)
+(defun org-collection-mode-line (collection)
   "Report collection name in the modeline."
   (let* ((name (plist-get collection ':name)))
-    (format "%s%s%s"
+    (format "%s%s"
             org-collection--mode-line-prefix
-            (if lock "!" "")
             (if name (format ":%s" name) ""))))
 
-(defun org-collection-update-mode-line (&optional lock)
+(defun org-collection-update-mode-line (&optional loaded)
   "Set `org-collection--mode-line'.
-The value is set in the current buffer, which should be a buffer
-that belongs to the COLLECETION.
-
-Uses buffer-local variable `org-collection-global' to determine
-how the mode-line shall look."
-  (let ((mode-line (org-collection-mode-line org-collection-global lock)))
-    (cond (lock
-           ;; With a lock the modeline should be locked in all
-           ;; buffers. Since `org-collection--mode-line' is buffer
-           ;; local this requires iteration.
-           (dolist (b (buffer-list))
-             (with-current-buffer b
-               (setq org-collection--mode-line mode-line)))
+When optional parameter LOADED is not nil, the loaded collection name
+is added to the mode-line."
+  (let ((mode-line (org-collection-mode-line org-collection)))
+    (cond (loaded
+           (setq org-collection--mode-line mode-line)
            ;; Also set the default value, but make sure it's reset
-           ;; when unlocked or the mode is disabled.
-           (setq org-collection-global-defaults-plist
-                 (plist-put org-collection-global-defaults-plist
+           ;; when unloaded or the mode is disabled.
+           (setq org-collection-defaults-plist
+                 (plist-put org-collection-defaults-plist
                             'org-collection--mode-line
                             org-collection--mode-line-prefix))
            (setq-default org-collection--mode-line mode-line))

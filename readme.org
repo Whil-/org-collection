@@ -2,20 +2,19 @@
 * Introduction
 ** Goals
 The goal is to wrap org-mode customizations into collections, or
-project if you will, to encourage a more modularized way of thinking
-and to help Org grow up a bit. Org should be less tied to emacs and by
-lifting customizations out from emacs into their own collections one
-step on the journey is taken. See more about motivation here:
-- [[id:20200729T125620.588871][Initial pitch]]
+project if you will, to encourage a more modularized way of thinking.
+See more about motivation here:
+- [[file:motivation.org]]
 
-Taking away the global mindset leaves something missing in between the
-whole of emacs and a singluar Org mode file. This hole is intended to
-be filled with the concept of an Org collection.
+This package makes it possible (though maybe still not easy) to
+configure org mode for multiple collections. Maybe one folder for your
+personal notes, and another for work? With org-collection it is easy
+to switch between them.
 
 * Installation
-Package currently only exist on Github and not in (M)ELPA. But using
-(for example) use-package and straight something like this will load
-this package:
+The package currently only exist on Github and not in (M)ELPA. With
+(for example) use-package and straight it's possible to load the
+package anyhow:
 
 #+begin_src emacs-lisp
   (use-package org-collection
@@ -29,13 +28,16 @@ this package:
 
 * Global minor mode
 The package provides a global minor mode ("OC" in mode-line). It does
-nothing on it's own but provies a couple of functions which can be
-used to load, unload and switch between collections.
+nothing on it's own except providing a couple of functions which can
+be used to load, unload and switch between collections.
 
 Notably the following:
-- =org-collection-register-and-lock=
-- =org-collection-lock=
-- =org-collection-unlock=
+- ~C-c z c~ (=org-collection-create=)
+- ~C-c z r~ (=org-collection-register=)
+- ~C-c z l~ (=org-collection-load=)
+- ~C-c z u~ (=org-collection-unload=)
+- ~C-c z f~ (=org-collection-visit-file=)
+- ~C-c z s~ (=org-collection-visit-settings=)
 
 * Org collection definition and declaration
 An org collection is defined as a folder in which a
@@ -70,8 +72,9 @@ used:
 More properties can be added but won't be used in any way (right now
 anyhow).
 
-At the time of writing this there are no helpers or validators
-available for creating this. Sorry.
+At the time of writing this there are no validators available. There
+is a helper-function for creating such a file though:
+- ~C-c z c~ (=org-collection-create=)
 
 [fn:1] This actually means quoting won't even work. This is
 unconvenient, since copy-paste of existing configurations now requires
@@ -131,20 +134,19 @@ A function, =org-collection-update-id-locations= is provided to update
 the ID locations for all org files within the collection.
 
 ** Selecting a collection
-The main way of activating a collection is by locking it in place.
-Functions for this are:
-- =org-collection-lock=
-- =org-collection-unlock=
+No collection is turned on by default.
+Functions for doing that, and undoing that, are:
+- =org-collection-load=
+- =org-collection-unload=
 
 If no collection exist since before they can be enabled by providing a
 path using:
-- =org-collection-register-and-lock=
+- =org-collection-register=
 
-This will also enable =org-collection-lock= for this collection for
-the future.
+That will also load the collection.
 
-When a lock is enabled the mode-line for org-collection-mode will show
-=OC!:collection name= to signal that a collection is locked in place.
+When a collection is loaded the mode-line for org-collection-mode will show
+=OC:collection name= to signal which collection is in use.
 
 * List of stored collections
 The package will keep track of previously visited collections using a
@@ -165,282 +167,9 @@ package. Because all other already existing modes that work on sets of
 org mode files could be seen as "org collection major modes". Those
 modes just needs to be configured for the collection at hand.
 
-* Initial pitch
-:PROPERTIES:
-:ID:       20200729T125620.588871
-:END:
-This pitch was sent to the Org mode mailinglist [2019-12-14 Sat]:
-- https://lists.gnu.org/archive/html/emacs-orgmode/2019-12/msg00215.html
-
-** Motivation
-Org mode is more than a major mode for emacs buffers. That has been
-clear for quite some time. Org mode can operate on sets of files.
-Consolidate TODO's and calendar information into custom views. Publish
-sets of files. To do this Org mode assumes that the user has a
-configuration for each of those features. Each feature is responsible
-for maintaining its own context. And almost all of that context has to
-be set globally. So even though Org mode has commands and features
-that operate on sets of files and folders it has not yet developed
-that in a congruent, extensible and composable way. Thus, for the
-sanity of our users and developers I think it's time to ... introduce
-another concept! One that hopefully can simplify things both for users
-and developers.
-
-** Idea
-I propose to introduce =Org Collection= as a concept in the realm of
-Org mode. [fn:2]
-
-An Org mode collection is defined as the combination of:
-1. A short name and description
-2. A collection of Org mode documents
-3. A collection of files and/or folders called attachments and
-   attachment-locations for the project
-4. A collection of configurations for the given project
-
-Globally available collections are defined in a list,
-=org-collections=. Org mode should include a safe parameter that can
-be set as a folder customization to the local active project,
-=org-collections-active=. The default should be to the first entry in
-=org-collections= unless customized. This local parameter would be
-used to instruct Emacs and Org mode on which collection is active.
-Only one collection at a time can be active.
-
-Org agenda should use =org-collections-active= as default for the
-collection of Org mode documents to operate on. Org agenda should get
-a new command to switch between active projects.
-
-I'm thinking that there could be a special Emacs major mode for the
-collection as well, called "Org collections mode". Not sure exactly
-what to display and how to represent the project there... But
-certainly some kind of list of included documents and attachments.
-When in that mode there should possibly be single key
-keyboard-shortcuts to the most important features that operate on the
-collection. And switch between them.
-
-[fn:2] I've previously written about this as "Projects". While Project
-was my initial name for this feature I think collection may be a
-better option. For the sake of this text both options work just fine.
-The idea is the same.
-
-** Benefit
-*** For the user
-A user would gain mainly two benefits as I can see right now:
-1. The ability to clearly define (multiple) collections of files that
-   belong together across org mode, with unique configurations.
-2. Less global configuration state to manage and worry about!
-
-The second point might not look like much but is sooo important! Most
-programmers know that global state should be avoided. Putting things
-in a context most of the time makes things better. And if we can
-configure Org mode connected to a context it makes it much more useful
-for those who use Org mode for multiple purposes.
-
-The first point is equally important in my opinion. Today one must
-configure Org mode per feature. If you want to configure publishing
-you do that globally. If you want to configure the agenda, you have to
-do that globally as well. If you want to define a location for
-attachments, do it globally! What about custom TODO-keywords? Do it
-globally! Track ID-locations? Define a location globally!
-
-All above adds cognitive load to the user and makes it difficult to
-maintain the configuration as the use of Org mode grows (as it should
-;) ). You have to define the context for each and every feature for it
-to know what to operate on. I claim that both the human psyche and the
-system itself will have a much more easy time if it could configure
-these features together, in a given context!
-
-*** For the developer
-I claim there will be benefits for developers as well. Today there
-exists many packages that extend Org mode functionality. Many work
-with the idea of collections. Some that come to mind:
-- Org brain (https://github.com/Kungsgeten/org-brain)
-- Org ql (https://github.com/alphapapa/org-ql)
-- Org Roam (https://github.com/org-roam/org-roam)
-- Zetteldeft (https://github.com/EFLS/zetteldeft)
-- Org zettelkasten (https://github.com/l3kn/org-zettelkasten)
-- Ox hugo (https://ox-hugo.scripter.co/)
-
-I think that with the addition of the =collections= concept into Org
-mode, package developers get a concept they can easily attach to. Yes,
-you can easily define your own package-specific concept for that as
-well. But then the user loses out in having to configure another
-feature. And yes, today you as a developer can say that Org agenda
-will be my collection to operate on. But this is a big limitation
-since it limits what your package effectively can only work to a
-single list of files.
-
-Having a collections concept means you as a developer have another
-base on which you can extend. No need to define your own concept if
-=Org-agenda-files= isn't enough; make it work together with
-=org-collections= instead. Org mode users will be happy because what
-they have already defined as important for them can be reused for new
-things with ease.
-
-Developing features inside Org mode itself hopefully also can benefit
-from this concept. I'm sure there are many people out there with cool
-ideas on how to extend and work with Org documents. And I'm equally
-sure that the value of developing many of those features will be
-bigger if they could naturally attach to an Org collections
-definition!
-
-** Example use cases
-*** Separate actions from reference
-One practice promoted by GTD is to separate actionable items from
-reference information. While that practice can be overcome by search
-etc. some might still value a clear separation.
-
-Want to look up something related to my general references? Search the
-Org collection related to reference-information! Maybe set up custom
-views and uses of TODO keywords for reference information for special
-agenda views.
-
-Want to only display not yet finished tasks? Switch to the Org
-collection for actionable items and browse away.
-
-*** Work / Personal separation
-The heading says it all. Some like to separate work and personal stuff
-out from each other. What more clear way to do that than can there be
-than to separate them into their own Org collections? That way you
-potentially could let your work-related workflow (I.e. TODO-keywords)
-be different than the personal workflow. Without having to think about
-a global configuration that has to allow for both.
-
-*** Separated book library
-Org mode can be used as a media manager of sort. Just define your
-conventions for the Org collection using TODO-keywords, categories and
-properties. Attach the e-books you have as attachments in an
-attachment-scheme special for your book library. Configure export of
-the library using maybe a custom HTML/CSS-visual and publish it
-somewhere for yourself to look at when on your phone. And do this
-without having to think of how changing all these things will affect
-the global state of Org mode, potentially messing up your other uses
-for task management or other notes and libraries you're trying to
-manage!
-
-Note that one can still have a holistic view on all Org mode documents
-as well, if important. It only requires a definition of a collection
-as the collection of all other collections!
-
-*** More?
-Please add more ideas when you think of them!
-
-** Risks and challenges
-*** Which configuration to use?
-When I'm visiting a file that belongs to a collection, how should
-Emacs resolve configurations for that file?
-
-There may be configurations in the following places:
-- Global in =emacs-custom.el= or =.emacs.d/init.el=
-- Directory local variables in the tree
-- File local variables
-- Local variables for the project definition in which the file
-  belongs?
-
-Should visiting a file always have to scan the collections list to see
-if the file belongs to any of them, in order to load customizations?
-Hmm... Maybe!? Or - maybe not if Emacs can rely on the fact that the
-user cares to set the local variable =org-collections-active= (or
-whatever it should be called)? In that case, just evaluate the
-settings for that project without doing any scan.
-
-*** Should project config allow local variables?
-Should the collections definition allow customization of variables
-that apply for Org mode features? Hmm... Maybe!? One thing that comes
-to mind is that a project should be able to define a custom attachment
-directory... How else would the attachment-feature know what
-attachment directory to use for files in that collection?
-
-Another option could ofc. be that each feature would have to add
-support for looking into the collection definition and override the
-local variable. But that will add development effort and complexity to
-each feature. Not suggested.
-
-**** How to initialize the local variables?
-When visiting a file that belongs to a collection, should Emacs at
-that point initialize the collection-configuration for that
-collection? Ideally some kind of collection-resolution would be made.
-Otherwise users will get strange behaviors when the think they are in
-one project but Org mode hasn't changed the local variables to match
-it. On the other hand, it doesn't sound very performant to have to
-check collection-belonging every time an Org mode file is visited!
-
-Possibly solve this with a variable that can be localized -
-=org-collections-active=?
-
-*** Conflict with other customizations
-Maybe I've defined an attachment directory as a directory local
-variables in a folder, for all subfolders and files to inherit. Should
-collection-customizations override that? Or should the directory local
-variables take precedence?
-
-Maybe could be solved by letting the (advanced) user choose using a
-customization itself, something like
-=org-collections-precede-local-variables= ? Need a intuitive default
-though. Most sane default is probably to let local variables take
-precedence. Those are created by the user anyways, so she should be
-aware.
-
-The more I think of it, there shouldn't be a customization for this at
-all. I think local definitions always should override the collection
-definition.
-
-*** Files that belong to multiple collections
-What if I'm being a clever user and define multiple collections for
-the same files (I.e. overlap in the Venn-diagram of files grouped by
-collections). Which collection is "active" when I'm visiting the file?
-
-This depends on if Emacs should evaluate the collection-settings for
-each file visit or not. If they are evaluated for each file visit then
-the first matching project in the list of collections should apply for
-that file. If a cache is created that lists file and collection
-relationships then each file should relate to a list of collections
-where the first collection in that list should apply.
-
-If Emacs can rely on =org-collections-active= being set, then the
-collection referenced there should be used.
-
-*** Dynamic lists of files and folders for a collection?
-Should the list of files allow for folders with recursion and patterns
-should it be required to provide a fixed defined list of files?
-
-Preferably the same way as =org-agenda-files= work today. Maybe some
-kind of caching-mechanism is needed though, for commands that might
-have to look for file, collection relations. A cache adds potential
-pain for the user though. If a file is added to a folder in a
-collection and a "collection-command" is run then the new file might not
-show up in the results anyway... So the user will be affected by
-caching and will have to know about it. Not good...
-
-** Alternatives
-Doing research for this feature made me realize that much of what I'm
-proposing already exist! In another form though, as [[info:emacs#Directory variables][directory
-variables]]. That requires customizations to be defined as safe though.
-And today some of the things I would consider to define a collection
-aren't safe. For example =org-agenda-files=, =org-todo-keywords=,
-=org-publish-project-alist=.
-
-Some issues with relying on directory variables (Assuming they also
-are made safe):
-- When invoking Org agenda I will have to first visit a file inside a
-  specific folder to get the agenda for the correct project
-- ....
-
-** References
-I've mentioned this idea the Org mode mailing list previously, but
-only as short side notes to other topics:
-- https://lists.gnu.org/archive/html/emacs-orgmode/2018-11/msg00211.html
-- https://lists.gnu.org/archive/html/emacs-orgmode/2019-09/msg00010.html
-
-Note that I've talked about it as "project". I think that name still
-could be considered instead of "collection". Collection is more
-general and less overloaded in terms of productivity software. And it
-shifts the focus away from task management a bit, which I think can be
-a good thing. Because while Org mode may often start to be used as a
-task/project manager software, it's useful in a much wider context
-than that!
-
 * Misc
 Read about some thoughts while building this here:
+- [[file:motivation.org]]
 - [[file:ramblings.org]]
 
 * Potential future ideas
