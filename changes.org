@@ -1,0 +1,24 @@
+#+TITLE: Changes
+* 2021-05-15 (Version 0.2)
+This software probably isn't used anywhere yet so no care is taken for
+backwards compatability.
+
+With the change today, some incompatabilities in user facing functions were added though. Notably the following:
+
+Rename of:
+- =org-collection-lock= to =org-collection-load=
+- =org-collection-unlock= to =org-collection-unload=
+
+Some new commands are added and some keyboard shortcuts are added.
+
+** New commands
+*** =org-collection-create=
+Helper that will create and register a new location. Default template hardcoded.
+
+*** =org-collection-visit-settings=
+Helper that will take you to the settings-file of a collection of choice.
+
+** Keyboard shortcut additions
+- ~C-c z c~ (=org-collection-create=)
+- ~C-c z s~ (=org-collection-visit-settings=)
+- ~C-c z f~ (=org-collection-visit-file=)

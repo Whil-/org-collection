@@ -5,7 +5,7 @@
 ;; Author: Gustav Wikström <gustav@whil.se>
 ;; URL: https://github.com/whil-/org-collection
 ;; Keywords: org-mode, collection, project
-;; Version: 0.1
+;; Version: 0.2
 ;; Package-Requires: ((emacs "27.1") (org "9.3"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -431,6 +431,7 @@ collection without file-extension."
   (let ((map (make-sparse-keymap))
 	(pmap (make-sparse-keymap)))
     (define-key pmap "q" 'org-collection-mode)
+    (define-key pmap "g" 'org-collection-goto)
     (define-key pmap "c" 'org-collection-create)
     (define-key pmap "r" 'org-collection-register)
     (define-key pmap "l" 'org-collection-load)

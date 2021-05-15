@@ -11,6 +11,9 @@ configure org mode for multiple collections. Maybe one folder for your
 personal notes, and another for work? With org-collection it is easy
 to switch between them.
 
+** Changes
+See [[file:changes.org]] for changes to this package that was worth pointing out.
+
 * Installation
 The package currently only exist on Github and not in (M)ELPA. With
 (for example) use-package and straight it's possible to load the
