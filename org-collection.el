@@ -435,8 +435,9 @@ collection without file-extension."
     (define-key pmap "g" 'org-collection-goto)
     (define-key pmap "c" 'org-collection-create)
     (define-key pmap "r" 'org-collection-register)
+    (define-key pmap "R" 'org-collection-unregister)
     (define-key pmap "l" 'org-collection-load)
-    (define-key pmap "u" 'org-collection-unload)
+    (define-key pmap "L" 'org-collection-unload)
     (define-key pmap "s" 'org-collection-visit-settings)
     (define-key pmap "f" 'org-collection-visit-file)
     ;; bind our submap into map

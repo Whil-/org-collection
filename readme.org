@@ -37,8 +37,9 @@ be used to load, unload and switch between collections.
 Notably the following:
 - ~C-c z c~ (=org-collection-create=)
 - ~C-c z r~ (=org-collection-register=)
+- ~C-c z R~ (=org-collection-unregister=) (uppercase = "Reverse" lowercase key)
 - ~C-c z l~ (=org-collection-load=)
-- ~C-c z u~ (=org-collection-unload=)
+- ~C-c z L~ (=org-collection-unload=) (uppercase = "Reverse" lowercase key)
 - ~C-c z f~ (=org-collection-visit-file=)
 - ~C-c z s~ (=org-collection-visit-settings=)
 
