@@ -347,7 +347,8 @@ Ignores dotfiles."
  :customization
  ((org-agenda-files (\":path:\"))))"
                             name))
-            (save-buffer))
+            (save-buffer)
+            (emacs-lisp-mode))
           (org-collection-register dir)
           (switch-to-buffer settings-buffer))))))
 
