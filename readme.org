@@ -40,6 +40,7 @@ Notably the following:
 - ~C-c z R~ (=org-collection-unregister=) (uppercase = "Reverse" lowercase key)
 - ~C-c z l~ (=org-collection-load=)
 - ~C-c z L~ (=org-collection-unload=) (uppercase = "Reverse" lowercase key)
+- ~C-c z h~ (=org-collection-visit-home=)
 - ~C-c z f~ (=org-collection-visit-file=)
 - ~C-c z s~ (=org-collection-visit-settings=)
 
@@ -52,6 +53,7 @@ form:
 #+begin_src emacs-lisp
   (org-collection-definition
    :name "ShortName"
+   :home "home.org"
    :require (package1 package2 ...)
    :customization ((org-defcustom1 value)
                    (org-defcustom2 value)
@@ -63,6 +65,9 @@ rest being a set of key-value properties where currently three keys are
 used:
 - :name :: Value is a short name for the collection. Used in mode line when
   global minor mode is active.
+- :home :: Value is a string containing the filename for the home file
+  within the collection. Use it for convenience together with command
+  =org-collection-visit-home= (~C-c z h~).
 - :require :: Value is a list of packages that the collection depend
   on, will be loaded when collection is activated, unless package
   already is loaded.

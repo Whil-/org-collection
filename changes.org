@@ -1,4 +1,29 @@
 #+TITLE: Changes
+* 2021-07-10
+Adding a configuration and a command for defining and quickly visiting a "home" for a collection.
+
+** New command
+*** =org-collection-visit-home=
+Goto the home of a collection, if it exist.
+
+** New property for configuration
+*** :home
+Next to the already existing :name, :require and :customization, one can now also declare :home. It can take a string with a filename within the collection.
+
+Example:
+#+begin_src emacs-lisp
+  ; -*- mode: emacs-lisp -*-
+  (org-collection-definition
+   :name "Personal"
+   :home "start here.org"
+   :require (org-agenda)
+   :customization (;; Agenda
+                   (org-agenda-files (":path:"))))
+#+end_src
+
+** Keyboard shortcut additions
+- ~C-c z h~ (=org-collection-visit-home=)
+
 * 2021-05-15 (Version 0.2)
 This software probably isn't used anywhere yet so no care is taken for
 backwards compatability.

@@ -358,6 +358,15 @@ Ignores dotfiles."
   (let ((dir (lax-plist-get org-collection-list collection-name)))
     (find-file dir)))
 
+(defun org-collection-visit-home ()
+  "Goto the home of a collection, if it exist."
+  (interactive)
+  (if-let* ((file (plist-get org-collection ':home))
+            (base-path (plist-get org-collection ':location))
+            (file-fullname (expand-file-name file base-path)))
+      (find-file file-fullname)
+    (message "No :home is set in current collection.")))
+
 (defun org-collection-visit-file (collection-file-no-extension)
   "Visit a file in a collection.
 `collection-file-no-extension' is a path relative to the current
@@ -440,6 +449,7 @@ collection without file-extension."
     (define-key pmap "L" 'org-collection-unload)
     (define-key pmap "s" 'org-collection-visit-settings)
     (define-key pmap "f" 'org-collection-visit-file)
+    (define-key pmap "h" 'org-collection-visit-home)
     ;; bind our submap into map
     (define-key map "\C-cz" pmap)
     map)
